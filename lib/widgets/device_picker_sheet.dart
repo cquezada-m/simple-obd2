@@ -1,5 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../services/wifi_obd2_service.dart';
 import '../theme/app_theme.dart';
 
@@ -35,7 +37,6 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
   @override
   void initState() {
     super.initState();
-    // En iOS, mostrar WiFi por defecto. En Android, Bluetooth.
     _showWifi = widget.isIOS;
   }
 
@@ -48,72 +49,87 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppTheme.border,
-                  borderRadius: BorderRadius.circular(2),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.88),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppTheme.textTertiary.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 20),
+                Text(
+                  'Conectar Dispositivo',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.isIOS
+                      ? 'Conecta vía WiFi al adaptador OBD2'
+                      : 'Selecciona el método de conexión',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (!widget.isIOS) ...[
+                  _buildModeToggle(),
+                  const SizedBox(height: 16),
+                ],
+                if (_showWifi)
+                  _buildWifiSection()
+                else
+                  _buildBluetoothSection(),
+                const SizedBox(height: 16),
+                Divider(color: AppTheme.textTertiary.withValues(alpha: 0.15)),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      widget.onUseMock();
+                    },
+                    icon: const Icon(Icons.science_outlined, size: 18),
+                    label: Text(
+                      'Usar datos de demostración',
+                      style: GoogleFonts.inter(fontSize: 13),
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.textSecondary,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
             ),
-            const SizedBox(height: 20),
-            const Text(
-              'Conectar Dispositivo',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              widget.isIOS
-                  ? 'Conecta via WiFi al adaptador OBD2'
-                  : 'Selecciona el metodo de conexion',
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Toggle Bluetooth / WiFi (solo en Android, en iOS solo WiFi)
-            if (!widget.isIOS) ...[
-              _buildModeToggle(),
-              const SizedBox(height: 16),
-            ],
-
-            // Contenido según modo
-            if (_showWifi) _buildWifiSection() else _buildBluetoothSection(),
-
-            const Divider(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                  widget.onUseMock();
-                },
-                icon: const Icon(Icons.science_outlined, size: 18),
-                label: const Text('Usar datos de demostracion'),
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
+          ),
         ),
       ),
     );
@@ -121,16 +137,16 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
 
   Widget _buildModeToggle() {
     return Container(
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+        color: AppTheme.surface.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
           Expanded(
             child: _toggleButton(
-              icon: Icons.bluetooth,
+              icon: Icons.bluetooth_rounded,
               label: 'Bluetooth',
               selected: !_showWifi,
               onTap: () => setState(() => _showWifi = false),
@@ -138,7 +154,7 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
           ),
           Expanded(
             child: _toggleButton(
-              icon: Icons.wifi,
+              icon: Icons.wifi_rounded,
               label: 'WiFi',
               selected: _showWifi,
               onTap: () => setState(() => _showWifi = true),
@@ -157,18 +173,18 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 10),
-        margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: selected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ]
               : null,
@@ -179,15 +195,15 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
             Icon(
               icon,
               size: 16,
-              color: selected ? AppTheme.primary : AppTheme.textSecondary,
+              color: selected ? AppTheme.primary : AppTheme.textTertiary,
             ),
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: selected ? AppTheme.textPrimary : AppTheme.textSecondary,
+                color: selected ? AppTheme.textPrimary : AppTheme.textTertiary,
               ),
             ),
           ],
@@ -200,58 +216,54 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Instrucciones
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppTheme.primaryLight,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.primary.withValues(alpha: 0.1)),
+            color: AppTheme.primary.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(14),
           ),
-          child: const Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(Icons.info_outline, size: 16, color: AppTheme.primary),
-                  SizedBox(width: 8),
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 15,
+                    color: AppTheme.primary.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(width: 8),
                   Text(
-                    'Como conectar via WiFi',
-                    style: TextStyle(
+                    'Cómo conectar vía WiFi',
+                    style: GoogleFonts.inter(
                       fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                       color: AppTheme.primary,
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 10),
               _WifiStep(
                 number: '1',
-                text: 'Conecta el adaptador OBD2 al puerto del vehiculo',
+                text: 'Conecta el adaptador OBD2 al puerto del vehículo',
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 6),
               _WifiStep(
                 number: '2',
                 text: 'Ve a Ajustes > WiFi en tu dispositivo',
               ),
-              SizedBox(height: 4),
-              _WifiStep(
-                number: '3',
-                text:
-                    'Conectate a la red del adaptador (ej: OBDLink, WiFi_OBDII, CLKDevices)',
-              ),
-              SizedBox(height: 4),
-              _WifiStep(number: '4', text: 'Regresa aqui y presiona Conectar'),
+              const SizedBox(height: 6),
+              _WifiStep(number: '3', text: 'Conéctate a la red del adaptador'),
+              const SizedBox(height: 6),
+              _WifiStep(number: '4', text: 'Regresa aquí y presiona Conectar'),
             ],
           ),
         ),
         const SizedBox(height: 16),
-
-        // Campos IP y Puerto
-        const Text(
-          'Direccion IP',
-          style: TextStyle(
+        Text(
+          'Dirección IP',
+          style: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w500,
             color: AppTheme.textPrimary,
@@ -261,29 +273,27 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
         TextField(
           controller: _hostController,
           keyboardType: TextInputType.number,
+          style: GoogleFonts.inter(fontSize: 14),
           decoration: InputDecoration(
             hintText: '192.168.0.10',
+            hintStyle: GoogleFonts.inter(color: AppTheme.textTertiary),
             prefixIcon: const Icon(Icons.router_outlined, size: 20),
             filled: true,
-            fillColor: AppTheme.surface,
+            fillColor: Colors.white.withValues(alpha: 0.6),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppTheme.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppTheme.border),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
-              vertical: 12,
+              vertical: 14,
             ),
           ),
         ),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'Puerto',
-          style: TextStyle(
+          style: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w500,
             color: AppTheme.textPrimary,
@@ -293,22 +303,20 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
         TextField(
           controller: _portController,
           keyboardType: TextInputType.number,
+          style: GoogleFonts.inter(fontSize: 14),
           decoration: InputDecoration(
             hintText: '35000',
-            prefixIcon: const Icon(Icons.tag, size: 20),
+            hintStyle: GoogleFonts.inter(color: AppTheme.textTertiary),
+            prefixIcon: const Icon(Icons.tag_rounded, size: 20),
             filled: true,
-            fillColor: AppTheme.surface,
+            fillColor: Colors.white.withValues(alpha: 0.6),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppTheme.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppTheme.border),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
-              vertical: 12,
+              vertical: 14,
             ),
           ),
         ),
@@ -324,8 +332,11 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
               Navigator.pop(context);
               widget.onWifiConnect(host, port);
             },
-            icon: const Icon(Icons.wifi, size: 18),
-            label: const Text('Conectar via WiFi'),
+            icon: const Icon(Icons.wifi_rounded, size: 18),
+            label: Text(
+              'Conectar vía WiFi',
+              style: GoogleFonts.inter(fontSize: 14),
+            ),
           ),
         ),
       ],
@@ -334,12 +345,12 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
 
   Widget _buildBluetoothSection() {
     if (widget.devices.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
         child: Center(
           child: Text(
             'No se encontraron dispositivos emparejados',
-            style: TextStyle(color: AppTheme.textSecondary),
+            style: GoogleFonts.inter(color: AppTheme.textSecondary),
           ),
         ),
       );
@@ -348,27 +359,41 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
     return Column(
       children: widget.devices
           .map(
-            (device) => ListTile(
-              leading: const Icon(Icons.bluetooth, color: AppTheme.primary),
-              title: Text(
-                device.name ?? 'Dispositivo desconocido',
-                style: const TextStyle(fontWeight: FontWeight.w500),
+            (device) => Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.bluetooth_rounded,
+                    color: AppTheme.primary,
+                    size: 20,
+                  ),
+                ),
+                title: Text(
+                  device.name ?? 'Dispositivo desconocido',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                ),
+                subtitle: Text(
+                  device.address,
+                  style: GoogleFonts.jetBrainsMono(fontSize: 11),
+                ),
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppTheme.textTertiary,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  widget.onDeviceSelected(device);
+                },
               ),
-              subtitle: Text(
-                device.address,
-                style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-              ),
-              trailing: const Icon(
-                Icons.chevron_right,
-                color: AppTheme.textTertiary,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                widget.onDeviceSelected(device);
-              },
             ),
           )
           .toList(),
@@ -391,12 +416,12 @@ class _WifiStep extends StatelessWidget {
           height: 18,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.15),
+            color: AppTheme.primary.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Text(
             number,
-            style: const TextStyle(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.w600,
               color: AppTheme.primary,
@@ -407,7 +432,7 @@ class _WifiStep extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
+            style: GoogleFonts.inter(
               fontSize: 12,
               color: AppTheme.textPrimary,
               height: 1.3,

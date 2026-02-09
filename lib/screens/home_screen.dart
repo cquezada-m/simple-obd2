@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/obd2_provider.dart';
 import '../theme/app_theme.dart';
@@ -35,22 +36,20 @@ class _HomeScreenState extends State<HomeScreen>
   void _showDevicePicker(BuildContext context) async {
     final provider = context.read<Obd2Provider>();
 
-    // En iOS no escaneamos Bluetooth, vamos directo al picker con WiFi
     if (!provider.isIOS) {
-      // Mostrar loading mientras escanea BT
       showModalBottomSheet(
         context: context,
         backgroundColor: Colors.transparent,
         builder: (_) => Container(
           padding: const EdgeInsets.all(40),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.85),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: const Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(),
+              CircularProgressIndicator(strokeWidth: 2.5),
               SizedBox(height: 16),
               Text('Buscando dispositivos...'),
             ],
@@ -59,7 +58,6 @@ class _HomeScreenState extends State<HomeScreen>
       );
 
       await provider.scanDevices();
-
       if (!context.mounted) return;
       Navigator.pop(context);
       if (!context.mounted) return;
@@ -84,70 +82,95 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryLight,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.directions_car,
-                size: 22,
-                color: AppTheme.primary,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'OBD2 Scanner',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
+      extendBodyBehindAppBar: true,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFE8F0FE), Color(0xFFF8F9FE), Color(0xFFF3E8FD)],
+          ),
+        ),
+        child: SafeArea(
+          child: Consumer<Obd2Provider>(
+            builder: (context, provider, _) {
+              return CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(child: _buildAppBar()),
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        ConnectionCard(
+                          isConnected: provider.isConnected,
+                          isConnecting: provider.isConnecting,
+                          onConnect: () => _showDevicePicker(context),
+                          onDisconnect: () => provider.disconnect(),
+                        ),
+                        if (provider.isConnected) ...[
+                          VehicleInfoCard(
+                            vin: provider.vin,
+                            protocol: provider.protocol,
+                            ecuCount: provider.ecuCount,
+                          ),
+                          _buildTabs(provider),
+                        ] else if (!provider.isConnecting) ...[
+                          if (provider.connectionError != null)
+                            _buildErrorBanner(provider.connectionError!),
+                          _buildDisconnectedState(),
+                        ],
+                        const SizedBox(height: 24),
+                      ]),
+                    ),
                   ),
-                ),
-                Text(
-                  'Diagnostico de Vehiculo',
-                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-                ),
-              ],
-            ),
-          ],
+                ],
+              );
+            },
+          ),
         ),
       ),
-      body: Consumer<Obd2Provider>(
-        builder: (context, provider, _) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                ConnectionCard(
-                  isConnected: provider.isConnected,
-                  isConnecting: provider.isConnecting,
-                  onConnect: () => _showDevicePicker(context),
-                  onDisconnect: () => provider.disconnect(),
-                ),
-                if (provider.isConnected) ...[
-                  VehicleInfoCard(
-                    vin: provider.vin,
-                    protocol: provider.protocol,
-                    ecuCount: provider.ecuCount,
-                  ),
-                  _buildTabs(provider),
-                ] else if (!provider.isConnecting) ...[
-                  if (provider.connectionError != null)
-                    _buildErrorBanner(provider.connectionError!),
-                  _buildDisconnectedState(),
-                ],
-              ],
+    );
+  }
+
+  Widget _buildAppBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
             ),
-          );
-        },
+            child: const Icon(
+              Icons.directions_car_rounded,
+              size: 22,
+              color: AppTheme.primary,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'OBD2 Scanner',
+                style: GoogleFonts.inter(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              Text(
+                'Diagnóstico de Vehículo',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -156,31 +179,31 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       children: [
         Container(
-          margin: const EdgeInsets.only(bottom: 12),
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+            color: Colors.white.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
           ),
           child: TabBar(
             controller: _tabController,
             indicator: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
             indicatorSize: TabBarIndicatorSize.tab,
-            indicatorPadding: const EdgeInsets.all(4),
             dividerColor: Colors.transparent,
             labelColor: AppTheme.textPrimary,
-            unselectedLabelColor: AppTheme.textSecondary,
-            labelStyle: const TextStyle(
+            unselectedLabelColor: AppTheme.textTertiary,
+            labelStyle: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -189,15 +212,15 @@ class _HomeScreenState extends State<HomeScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.warning_amber, size: 16),
+                    const Icon(Icons.warning_amber_rounded, size: 16),
                     const SizedBox(width: 6),
-                    const Text('Diagnostico'),
+                    const Text('Diagnóstico'),
                     if (provider.dtcCodes.isNotEmpty) ...[
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 1,
+                          horizontal: 7,
+                          vertical: 2,
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.error,
@@ -205,7 +228,7 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                         child: Text(
                           '${provider.dtcCodes.length}',
-                          style: const TextStyle(
+                          style: GoogleFonts.inter(
                             fontSize: 11,
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
@@ -220,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.show_chart, size: 16),
+                    Icon(Icons.show_chart_rounded, size: 16),
                     SizedBox(width: 6),
                     Text('En Vivo'),
                   ],
@@ -230,7 +253,6 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
         SizedBox(
-          // Calcular altura necesaria para el contenido
           height: _calculateTabHeight(provider),
           child: TabBarView(
             controller: _tabController,
@@ -269,12 +291,11 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   double _calculateTabHeight(Obd2Provider provider) {
-    // Estimación dinámica basada en contenido
     final dtcHeight = provider.dtcCodes.isEmpty
         ? 250.0
         : (provider.dtcCodes.length * 100.0 + 120);
     final recHeight = provider.getRecommendations().length * 280.0 + 160;
-    final liveHeight = 420.0; // Grid de parámetros
+    final liveHeight = 420.0;
     final diagTab = dtcHeight + recHeight;
     final liveTab = liveHeight + recHeight;
     return (diagTab > liveTab ? diagTab : liveTab) + 40;
@@ -286,34 +307,34 @@ class _HomeScreenState extends State<HomeScreen>
       child: Column(
         children: [
           Container(
-            width: 80,
-            height: 80,
-            decoration: const BoxDecoration(
-              color: AppTheme.surface,
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.directions_car,
+              Icons.directions_car_rounded,
               size: 40,
               color: AppTheme.textTertiary,
             ),
           ),
-          const SizedBox(height: 16),
-          const Text(
+          const SizedBox(height: 20),
+          Text(
             'Conecta tu dispositivo OBD2',
-            style: TextStyle(
+            style: GoogleFonts.inter(
               fontWeight: FontWeight.w500,
               fontSize: 16,
               color: AppTheme.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48),
             child: Text(
-              'Conecta el escaner al puerto de diagnostico de tu vehiculo y presiona conectar',
+              'Conecta el escáner al puerto de diagnóstico de tu vehículo y presiona conectar',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 color: AppTheme.textSecondary,
                 height: 1.5,
@@ -326,28 +347,34 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildErrorBanner(String error) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      color: AppTheme.errorLight,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.error_outline, size: 20, color: AppTheme.error),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                error,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppTheme.textPrimary,
-                  height: 1.4,
-                ),
+    return GlassCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.error.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.error_outline_rounded,
+              size: 18,
+              color: AppTheme.error,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              error,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: AppTheme.textPrimary,
+                height: 1.4,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
