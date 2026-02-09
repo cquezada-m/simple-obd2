@@ -25,11 +25,21 @@ class LiveParametersCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Parámetros en Tiempo Real',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+                const Text(
+                  'Parámetros en Tiempo Real',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
                 Container(
-                  width: 8, height: 8,
-                  decoration: const BoxDecoration(color: AppTheme.success, shape: BoxShape.circle),
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.success,
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ],
             ),
@@ -51,7 +61,9 @@ class LiveParametersCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppTheme.surface,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+                    border: Border.all(
+                      color: AppTheme.border.withValues(alpha: 0.5),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,9 +73,15 @@ class LiveParametersCard extends StatelessWidget {
                           Icon(p.icon, size: 18, color: AppTheme.textPrimary),
                           const SizedBox(width: 6),
                           Expanded(
-                            child: Text(p.label,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.textSecondary),
-                              overflow: TextOverflow.ellipsis),
+                            child: Text(
+                              p.label,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.textSecondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -71,13 +89,25 @@ class LiveParametersCard extends StatelessWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(p.value,
-                            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                          Text(
+                            p.value,
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
                           const SizedBox(width: 4),
                           Padding(
                             padding: const EdgeInsets.only(bottom: 4),
-                            child: Text(p.unit,
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
+                            child: Text(
+                              p.unit,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -88,7 +118,9 @@ class LiveParametersCard extends StatelessWidget {
                           value: p.percentage / 100,
                           minHeight: 5,
                           backgroundColor: AppTheme.border,
-                          valueColor: AlwaysStoppedAnimation(_progressColor(p.percentage)),
+                          valueColor: AlwaysStoppedAnimation(
+                            _progressColor(p.percentage),
+                          ),
                         ),
                       ),
                     ],

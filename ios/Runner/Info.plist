@@ -51,5 +51,10 @@
 	<string>Esta app necesita Bluetooth para conectarse al adaptador OBD2 de tu vehículo</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Esta app necesita acceso a la red local para conectarse al adaptador OBD2 vía WiFi</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

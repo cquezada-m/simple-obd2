@@ -29,18 +29,33 @@ class VehicleInfoCard extends StatelessWidget {
                     color: AppTheme.primaryLight,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.directions_car, size: 24, color: AppTheme.primary),
+                  child: const Icon(
+                    Icons.directions_car,
+                    size: 24,
+                    color: AppTheme.primary,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Información del Vehículo',
-                        style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16, color: AppTheme.textPrimary)),
+                      Text(
+                        'Información del Vehículo',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 16,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
                       SizedBox(height: 2),
-                      Text('Datos del sistema OBD2',
-                        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                      Text(
+                        'Datos del sistema OBD2',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -58,7 +73,9 @@ class VehicleInfoCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppTheme.primaryLight,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.1)),
+                border: Border.all(
+                  color: AppTheme.primary.withValues(alpha: 0.1),
+                ),
               ),
               child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,7 +85,10 @@ class VehicleInfoCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'Los datos se actualizan cada 2 segundos',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textPrimary),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textPrimary,
+                      ),
                     ),
                   ),
                 ],
@@ -80,7 +100,12 @@ class VehicleInfoCard extends StatelessWidget {
     );
   }
 
-  Widget _infoRow(IconData icon, String label, String value, {bool mono = false}) {
+  Widget _infoRow(
+    IconData icon,
+    String label,
+    String value, {
+    bool mono = false,
+  }) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -92,7 +117,10 @@ class VehicleInfoCard extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: AppTheme.textTertiary),
           const SizedBox(width: 8),
-          Text(label, style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+          ),
           const Spacer(),
           Flexible(
             child: Text(

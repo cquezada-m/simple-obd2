@@ -32,7 +32,11 @@ class ConnectionCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isConnected ? 'Conectado' : isConnecting ? 'Conectando...' : 'Desconectado',
+                        isConnected
+                            ? 'Conectado'
+                            : isConnecting
+                            ? 'Conectando...'
+                            : 'Desconectado',
                         style: const TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: 16,
@@ -43,12 +47,19 @@ class ConnectionCard extends StatelessWidget {
                       Row(
                         children: [
                           if (isConnected) ...[
-                            const Icon(Icons.wifi, size: 14, color: AppTheme.textSecondary),
+                            const Icon(
+                              Icons.wifi,
+                              size: 14,
+                              color: AppTheme.textSecondary,
+                            ),
                             const SizedBox(width: 4),
                           ],
                           Text(
                             isConnected ? 'OBD2 ELM327' : 'Dispositivo OBD2',
-                            style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppTheme.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -58,12 +69,18 @@ class ConnectionCard extends StatelessWidget {
                 if (isConnected)
                   OutlinedButton(
                     onPressed: onDisconnect,
-                    child: const Text('Desconectar', style: TextStyle(fontSize: 13)),
+                    child: const Text(
+                      'Desconectar',
+                      style: TextStyle(fontSize: 13),
+                    ),
                   )
                 else
                   ElevatedButton(
                     onPressed: isConnecting ? null : onConnect,
-                    child: Text(isConnecting ? 'Conectando...' : 'Conectar', style: const TextStyle(fontSize: 14)),
+                    child: Text(
+                      isConnecting ? 'Conectando...' : 'Conectar',
+                      style: const TextStyle(fontSize: 14),
+                    ),
                   ),
               ],
             ),
@@ -74,7 +91,9 @@ class ConnectionCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppTheme.primaryLight,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.primary.withValues(alpha: 0.1)),
+                  border: Border.all(
+                    color: AppTheme.primary.withValues(alpha: 0.1),
+                  ),
                 ),
                 child: const Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,7 +103,10 @@ class ConnectionCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         'Asegúrate de que tu dispositivo OBD2 esté conectado al vehículo y encendido.',
-                        style: TextStyle(fontSize: 12, color: AppTheme.textPrimary),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textPrimary,
+                        ),
                       ),
                     ),
                   ],
@@ -109,10 +131,7 @@ class ConnectionCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: bgColor,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
       child: const Icon(Icons.bluetooth, size: 22, color: Colors.white),
     );
   }

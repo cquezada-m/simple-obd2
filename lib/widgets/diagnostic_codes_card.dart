@@ -25,13 +25,24 @@ class DiagnosticCodesCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Códigos de Diagnóstico',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+                const Text(
+                  'Códigos de Diagnóstico',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
                 if (codes.isNotEmpty)
                   OutlinedButton(
                     onPressed: isClearing ? null : onClearCodes,
-                    style: OutlinedButton.styleFrom(foregroundColor: AppTheme.error),
-                    child: Text(isClearing ? 'Borrando...' : 'Borrar', style: const TextStyle(fontSize: 13)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.error,
+                    ),
+                    child: Text(
+                      isClearing ? 'Borrando...' : 'Borrar',
+                      style: const TextStyle(fontSize: 13),
+                    ),
                   ),
               ],
             ),
@@ -54,14 +65,25 @@ class DiagnosticCodesCard extends StatelessWidget {
               color: AppTheme.successLight,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.check_circle, size: 32, color: AppTheme.success),
+            child: const Icon(
+              Icons.check_circle,
+              size: 32,
+              color: AppTheme.success,
+            ),
           ),
           const SizedBox(height: 12),
-          const Text('Sin códigos de error',
-            style: TextStyle(fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+          const Text(
+            'Sin códigos de error',
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              color: AppTheme.textPrimary,
+            ),
+          ),
           const SizedBox(height: 4),
-          const Text('El sistema está funcionando correctamente',
-            style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+          const Text(
+            'El sistema está funcionando correctamente',
+            style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+          ),
         ],
       ),
     );
@@ -70,7 +92,9 @@ class DiagnosticCodesCard extends StatelessWidget {
   Widget _buildCodesList() {
     return Column(
       children: codes.map((code) {
-        final (bgColor, borderColor, iconColor, icon, label) = _severityStyle(code.severity);
+        final (bgColor, borderColor, iconColor, icon, label) = _severityStyle(
+          code.severity,
+        );
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(14),
@@ -90,23 +114,45 @@ class DiagnosticCodesCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(code.code,
-                          style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w600, fontSize: 14, color: AppTheme.textPrimary)),
+                        Text(
+                          code.code,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.6),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(color: AppTheme.border),
                           ),
-                          child: Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                          child: Text(
+                            label,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(code.description,
-                      style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.4)),
+                    Text(
+                      code.description,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -120,11 +166,29 @@ class DiagnosticCodesCard extends StatelessWidget {
   (Color, Color, Color, IconData, String) _severityStyle(DtcSeverity severity) {
     switch (severity) {
       case DtcSeverity.critical:
-        return (AppTheme.errorLight, AppTheme.error.withValues(alpha: 0.2), AppTheme.error, Icons.report, 'Crítico');
+        return (
+          AppTheme.errorLight,
+          AppTheme.error.withValues(alpha: 0.2),
+          AppTheme.error,
+          Icons.report,
+          'Crítico',
+        );
       case DtcSeverity.warning:
-        return (AppTheme.warningLight, AppTheme.warning.withValues(alpha: 0.2), AppTheme.warning, Icons.warning_amber, 'Advertencia');
+        return (
+          AppTheme.warningLight,
+          AppTheme.warning.withValues(alpha: 0.2),
+          AppTheme.warning,
+          Icons.warning_amber,
+          'Advertencia',
+        );
       case DtcSeverity.info:
-        return (AppTheme.primaryLight, AppTheme.primary.withValues(alpha: 0.2), AppTheme.primary, Icons.info_outline, 'Info');
+        return (
+          AppTheme.primaryLight,
+          AppTheme.primary.withValues(alpha: 0.2),
+          AppTheme.primary,
+          Icons.info_outline,
+          'Info',
+        );
     }
   }
 }

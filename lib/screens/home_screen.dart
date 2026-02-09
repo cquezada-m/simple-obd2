@@ -16,7 +16,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -34,31 +35,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void _showDevicePicker(BuildContext context) async {
     final provider = context.read<Obd2Provider>();
 
-    // Mostrar loading mientras escanea
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        padding: const EdgeInsets.all(40),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    // En iOS no escaneamos Bluetooth, vamos directo al picker con WiFi
+    if (!provider.isIOS) {
+      // Mostrar loading mientras escanea BT
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (_) => Container(
+          padding: const EdgeInsets.all(40),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Buscando dispositivos...'),
+            ],
+          ),
         ),
-        child: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Buscando dispositivos...'),
-          ],
-        ),
-      ),
-    );
+      );
 
-    await provider.scanDevices();
+      await provider.scanDevices();
 
-    if (!context.mounted) return;
-    Navigator.pop(context); // Cerrar loading
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      if (!context.mounted) return;
+    }
 
     if (!context.mounted) return;
     showModalBottomSheet(
@@ -67,7 +72,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       isScrollControlled: true,
       builder: (_) => DevicePickerSheet(
         devices: provider.pairedDevices,
-        onDeviceSelected: (device) => provider.connect(device),
+        isIOS: provider.isIOS,
+        onDeviceSelected: (device) => provider.connectBluetooth(device),
+        onWifiConnect: (host, port) =>
+            provider.connectWifi(host: host, port: port),
         onUseMock: () => provider.connectMock(),
       ),
     );
@@ -85,16 +93,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 color: AppTheme.primaryLight,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.directions_car, size: 22, color: AppTheme.primary),
+              child: const Icon(
+                Icons.directions_car,
+                size: 22,
+                color: AppTheme.primary,
+              ),
             ),
             const SizedBox(width: 12),
             const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('OBD2 Scanner',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-                Text('Diagnostico de Vehiculo',
-                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                Text(
+                  'OBD2 Scanner',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                Text(
+                  'Diagnostico de Vehiculo',
+                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                ),
               ],
             ),
           ],
@@ -119,8 +139,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ecuCount: provider.ecuCount,
                   ),
                   _buildTabs(provider),
-                ] else if (!provider.isConnecting)
+                ] else if (!provider.isConnecting) ...[
+                  if (provider.connectionError != null)
+                    _buildErrorBanner(provider.connectionError!),
                   _buildDisconnectedState(),
+                ],
               ],
             ),
           );
@@ -145,7 +168,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 1)),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
               ],
             ),
             indicatorSize: TabBarIndicatorSize.tab,
@@ -153,7 +180,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             dividerColor: Colors.transparent,
             labelColor: AppTheme.textPrimary,
             unselectedLabelColor: AppTheme.textSecondary,
-            labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            labelStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
             tabs: [
               Tab(
                 child: Row(
@@ -165,13 +195,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     if (provider.dtcCodes.isNotEmpty) ...[
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.error,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Text('${provider.dtcCodes.length}',
-                          style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w600)),
+                        child: Text(
+                          '${provider.dtcCodes.length}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ],
@@ -205,7 +244,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       onClearCodes: () => provider.clearCodes(),
                       isClearing: provider.isClearing,
                     ),
-                    AiRecommendationsCard(recommendations: provider.getRecommendations()),
+                    AiRecommendationsCard(
+                      recommendations: provider.getRecommendations(),
+                    ),
                   ],
                 ),
               ),
@@ -214,7 +255,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: Column(
                   children: [
                     LiveParametersCard(parameters: provider.liveParams),
-                    AiRecommendationsCard(recommendations: provider.getRecommendations()),
+                    AiRecommendationsCard(
+                      recommendations: provider.getRecommendations(),
+                    ),
                   ],
                 ),
               ),
@@ -227,7 +270,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   double _calculateTabHeight(Obd2Provider provider) {
     // Estimación dinámica basada en contenido
-    final dtcHeight = provider.dtcCodes.isEmpty ? 250.0 : (provider.dtcCodes.length * 100.0 + 120);
+    final dtcHeight = provider.dtcCodes.isEmpty
+        ? 250.0
+        : (provider.dtcCodes.length * 100.0 + 120);
     final recHeight = provider.getRecommendations().length * 280.0 + 160;
     final liveHeight = 420.0; // Grid de parámetros
     final diagTab = dtcHeight + recHeight;
@@ -241,26 +286,68 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       child: Column(
         children: [
           Container(
-            width: 80, height: 80,
+            width: 80,
+            height: 80,
             decoration: const BoxDecoration(
               color: AppTheme.surface,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.directions_car, size: 40, color: AppTheme.textTertiary),
+            child: const Icon(
+              Icons.directions_car,
+              size: 40,
+              color: AppTheme.textTertiary,
+            ),
           ),
           const SizedBox(height: 16),
-          const Text('Conecta tu dispositivo OBD2',
-            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16, color: AppTheme.textPrimary)),
+          const Text(
+            'Conecta tu dispositivo OBD2',
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 16,
+              color: AppTheme.textPrimary,
+            ),
+          ),
           const SizedBox(height: 8),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 40),
             child: Text(
               'Conecta el escaner al puerto de diagnostico de tu vehiculo y presiona conectar',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary, height: 1.5),
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+                height: 1.5,
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner(String error) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      color: AppTheme.errorLight,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.error_outline, size: 20, color: AppTheme.error),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                error,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textPrimary,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
