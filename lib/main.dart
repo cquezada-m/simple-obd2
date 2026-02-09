@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'providers/obd2_provider.dart';
-import 'screens/home_screen.dart';
+import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -27,7 +27,7 @@ class OBD2App extends StatelessWidget {
         title: 'OBD2 Scanner',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const HomeScreen(),
+        home: const SplashScreen(),
       ),
     );
   }
