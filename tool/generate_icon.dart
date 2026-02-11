@@ -6,11 +6,19 @@ import 'dart:math' as math;
 /// Run: dart run tool/generate_icon.dart
 Future<void> main() async {
   await _generateIcon('assets/icon/app_icon.png', 1024, withBackground: true);
-  await _generateIcon('assets/icon/app_icon_foreground.png', 1024, withBackground: false);
+  await _generateIcon(
+    'assets/icon/app_icon_foreground.png',
+    1024,
+    withBackground: false,
+  );
   print('Icons generated in assets/icon/');
 }
 
-Future<void> _generateIcon(String path, int size, {required bool withBackground}) async {
+Future<void> _generateIcon(
+  String path,
+  int size, {
+  required bool withBackground,
+}) async {
   final file = File(path);
   await file.parent.create(recursive: true);
 
@@ -43,7 +51,15 @@ Future<void> _generateIcon(String path, int size, {required bool withBackground}
       final carBot = carTop + carH;
       final carRad = size * 0.04;
 
-      if (_inRoundedRect(x.toDouble(), y.toDouble(), carLeft, carTop, carRight, carBot, carRad)) {
+      if (_inRoundedRect(
+        x.toDouble(),
+        y.toDouble(),
+        carLeft,
+        carTop,
+        carRight,
+        carBot,
+        carRad,
+      )) {
         _setWhite(pixels, idx);
       }
 
@@ -64,7 +80,9 @@ Future<void> _generateIcon(String path, int size, {required bool withBackground}
       final winTop = carTop - size * 0.12;
       final winBot = carTop - size * 0.02;
       if (y >= winTop && y < winBot) {
-        final p = (y - (carTop - size * 0.15)) / ((carTop + size * 0.01) - (carTop - size * 0.15));
+        final p =
+            (y - (carTop - size * 0.15)) /
+            ((carTop + size * 0.01) - (carTop - size * 0.15));
         final topHalf = size * 0.15;
         final botHalf = carW / 2 * 0.85;
         final roofHalfW = topHalf + (botHalf - topHalf) * p;
@@ -123,13 +141,19 @@ Future<void> _generateIcon(String path, int size, {required bool withBackground}
       final arcThick = size * 0.022;
 
       // Arc: top semicircle with small gap at bottom
-      if (gDist >= gaugeR - arcThick && gDist <= gaugeR + arcThick &&
-          gAngle >= -math.pi * 0.85 && gAngle <= -math.pi * 0.15) {
+      if (gDist >= gaugeR - arcThick &&
+          gDist <= gaugeR + arcThick &&
+          gAngle >= -math.pi * 0.85 &&
+          gAngle <= -math.pi * 0.15) {
         _setWhite(pixels, idx);
       }
 
       // Tick marks on the arc
-      for (var tickAngle = -math.pi * 0.8; tickAngle <= -math.pi * 0.2; tickAngle += math.pi * 0.15) {
+      for (
+        var tickAngle = -math.pi * 0.8;
+        tickAngle <= -math.pi * 0.2;
+        tickAngle += math.pi * 0.15
+      ) {
         final tInnerR = gaugeR + arcThick;
         final tOuterR = gaugeR + arcThick + size * 0.018;
         if (gDist >= tInnerR && gDist <= tOuterR) {
@@ -144,7 +168,14 @@ Future<void> _generateIcon(String path, int size, {required bool withBackground}
       final needleAngle = -math.pi * 0.35;
       final nEndX = cx + gaugeR * 0.75 * math.cos(needleAngle);
       final nEndY = gaugeY + gaugeR * 0.75 * math.sin(needleAngle);
-      final nDist = _distToSeg(x.toDouble(), y.toDouble(), cx, gaugeY, nEndX, nEndY);
+      final nDist = _distToSeg(
+        x.toDouble(),
+        y.toDouble(),
+        cx,
+        gaugeY,
+        nEndX,
+        nEndY,
+      );
       if (nDist <= size * 0.012) {
         _setWhite(pixels, idx);
       }
@@ -161,13 +192,24 @@ Future<void> _generateIcon(String path, int size, {required bool withBackground}
 }
 
 void _setWhite(Uint8List p, int i) {
-  p[i] = 255; p[i+1] = 255; p[i+2] = 255; p[i+3] = 255;
+  p[i] = 255;
+  p[i + 1] = 255;
+  p[i + 2] = 255;
+  p[i + 3] = 255;
 }
 
 double _dist(double x1, double y1, double x2, double y2) =>
-    math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+    math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 
-bool _inRoundedRect(double x, double y, double l, double t, double r, double b, double rad) {
+bool _inRoundedRect(
+  double x,
+  double y,
+  double l,
+  double t,
+  double r,
+  double b,
+  double rad,
+) {
   if (x < l || x > r || y < t || y > b) return false;
   // Check corners
   if (x < l + rad && y < t + rad) return _dist(x, y, l + rad, t + rad) <= rad;
@@ -177,7 +219,14 @@ bool _inRoundedRect(double x, double y, double l, double t, double r, double b, 
   return true;
 }
 
-double _distToSeg(double px, double py, double x1, double y1, double x2, double y2) {
+double _distToSeg(
+  double px,
+  double py,
+  double x1,
+  double y1,
+  double x2,
+  double y2,
+) {
   final dx = x2 - x1, dy = y2 - y1;
   final lenSq = dx * dx + dy * dy;
   if (lenSq == 0) return _dist(px, py, x1, y1);
@@ -193,7 +242,7 @@ Uint8List _encodePng(Uint8List rgba, int w, int h) {
     raw.add(0); // filter: none
     for (int x = 0; x < w; x++) {
       final i = (y * w + x) * 4;
-      raw.addAll([rgba[i], rgba[i+1], rgba[i+2], rgba[i+3]]);
+      raw.addAll([rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]]);
     }
   }
   final compressed = ZLibCodec().encode(raw);
@@ -210,7 +259,12 @@ Uint8List _encodePng(Uint8List rgba, int w, int h) {
   return out.toBytes();
 }
 
-List<int> _u32(int v) => [(v >> 24) & 0xFF, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF];
+List<int> _u32(int v) => [
+  (v >> 24) & 0xFF,
+  (v >> 16) & 0xFF,
+  (v >> 8) & 0xFF,
+  v & 0xFF,
+];
 
 void _chunk(BytesBuilder b, String type, List<int> data) {
   b.add(_u32(data.length));
