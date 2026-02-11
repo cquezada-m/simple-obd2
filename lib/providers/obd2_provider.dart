@@ -443,27 +443,45 @@ class Obd2Provider extends ChangeNotifier {
         case 'P0301':
           recs.add(
             Recommendation(
-              title: isEs ? 'Revisar Sistema de Encendido - Cilindro 1' : 'Check Ignition System - Cylinder 1',
+              title: isEs
+                  ? 'Revisar Sistema de Encendido - Cilindro 1'
+                  : 'Check Ignition System - Cylinder 1',
               description: isEs
                   ? 'El fallo de encendido puede deberse a bujias desgastadas, bobinas defectuosas o problemas en los inyectores.'
                   : 'Misfire may be caused by worn spark plugs, faulty coils, or injector problems.',
               priority: RecommendationPriority.high,
               components: isEs
-                  ? const ['Bujias', 'Bobinas de encendido', 'Inyectores', 'Cables de alta tension']
-                  : const ['Spark plugs', 'Ignition coils', 'Injectors', 'High tension cables'],
+                  ? const [
+                      'Bujias',
+                      'Bobinas de encendido',
+                      'Inyectores',
+                      'Cables de alta tension',
+                    ]
+                  : const [
+                      'Spark plugs',
+                      'Ignition coils',
+                      'Injectors',
+                      'High tension cables',
+                    ],
               estimatedCost: '\$50 - \$300',
             ),
           );
         case 'P0420':
           recs.add(
             Recommendation(
-              title: isEs ? 'Inspeccion del Catalizador' : 'Catalyst Inspection',
+              title: isEs
+                  ? 'Inspeccion del Catalizador'
+                  : 'Catalyst Inspection',
               description: isEs
                   ? 'La eficiencia del catalizador esta por debajo del umbral. Puede requerir limpieza o reemplazo.'
                   : 'Catalyst efficiency is below threshold. May require cleaning or replacement.',
               priority: RecommendationPriority.medium,
               components: isEs
-                  ? const ['Catalizador', 'Sensores de oxigeno', 'Sistema de escape']
+                  ? const [
+                      'Catalizador',
+                      'Sensores de oxigeno',
+                      'Sistema de escape',
+                    ]
                   : const ['Catalyst', 'Oxygen sensors', 'Exhaust system'],
               estimatedCost: '\$200 - \$1,500',
             ),
@@ -471,14 +489,26 @@ class Obd2Provider extends ChangeNotifier {
         case 'P0171':
           recs.add(
             Recommendation(
-              title: isEs ? 'Verificar Sistema de Combustible' : 'Check Fuel System',
+              title: isEs
+                  ? 'Verificar Sistema de Combustible'
+                  : 'Check Fuel System',
               description: isEs
                   ? 'El sistema esta funcionando muy pobre. Revisar filtro de aire, sensores MAF y posibles fugas de vacio.'
                   : 'System is running too lean. Check air filter, MAF sensors, and possible vacuum leaks.',
               priority: RecommendationPriority.medium,
               components: isEs
-                  ? const ['Filtro de aire', 'Sensor MAF', 'Sistema de vacio', 'Inyectores']
-                  : const ['Air filter', 'MAF sensor', 'Vacuum system', 'Injectors'],
+                  ? const [
+                      'Filtro de aire',
+                      'Sensor MAF',
+                      'Sistema de vacio',
+                      'Inyectores',
+                    ]
+                  : const [
+                      'Air filter',
+                      'MAF sensor',
+                      'Vacuum system',
+                      'Injectors',
+                    ],
               estimatedCost: '\$100 - \$400',
             ),
           );
@@ -489,14 +519,26 @@ class Obd2Provider extends ChangeNotifier {
     if (int.tryParse(temp.value) != null && int.parse(temp.value) > 100) {
       recs.add(
         Recommendation(
-          title: isEs ? 'Temperatura del Motor Elevada' : 'High Engine Temperature',
+          title: isEs
+              ? 'Temperatura del Motor Elevada'
+              : 'High Engine Temperature',
           description: isEs
               ? 'El motor esta operando a temperatura alta. Verificar nivel de refrigerante y funcionamiento del termostato.'
               : 'Engine is operating at high temperature. Check coolant level and thermostat operation.',
           priority: RecommendationPriority.high,
           components: isEs
-              ? const ['Sistema de refrigeracion', 'Termostato', 'Bomba de agua', 'Radiador']
-              : const ['Cooling system', 'Thermostat', 'Water pump', 'Radiator'],
+              ? const [
+                  'Sistema de refrigeracion',
+                  'Termostato',
+                  'Bomba de agua',
+                  'Radiador',
+                ]
+              : const [
+                  'Cooling system',
+                  'Thermostat',
+                  'Water pump',
+                  'Radiator',
+                ],
           estimatedCost: '\$80 - \$500',
         ),
       );

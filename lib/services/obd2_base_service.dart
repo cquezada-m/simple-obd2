@@ -21,31 +21,76 @@ abstract class Obd2BaseService {
   void dispose();
 
   // Helpers compartidos para decodificar respuestas OBD2
-  static int? parseOneByte(String? response, {int offset = 4}) {
+
+  /// Extracts the data portion from an OBD2 response.
+  /// Handles multi-line responses, echoed commands, and various ELM327 quirks.
+  /// Returns only the hex data bytes after the mode+PID header.
+  static String? _extractResponseData(String? response, String expectedHeader) {
+    if (response == null || response.isEmpty || response.contains('NO DATA')) {
+      return null;
+    }
+
+    final lines = response
+        .split(RegExp(r'[\r\n]+'))
+        .map((l) => l.trim())
+        .where(
+          (l) =>
+              l.isNotEmpty && !l.startsWith('SEARCHING') && !l.startsWith('AT'),
+        )
+        .toList();
+
+    for (final line in lines) {
+      final hex = line.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
+      // Look for the expected response header (e.g., "410C" for RPM)
+      final idx = hex.indexOf(expectedHeader);
+      if (idx >= 0) {
+        return hex.substring(idx + expectedHeader.length);
+      }
+    }
+
+    // Fallback: strip first 4 hex chars as before
+    final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
+    if (cleaned.length > 4) {
+      return cleaned.substring(4);
+    }
+    return null;
+  }
+
+  static int? parseOneByte(String? response, {String expectedHeader = ''}) {
     if (response == null || response.isEmpty || response.contains('NO DATA')) {
       return null;
     }
     try {
-      final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
-      if (cleaned.length >= offset + 2) {
-        return int.parse(cleaned.substring(offset, offset + 2), radix: 16);
+      String? data;
+      if (expectedHeader.isNotEmpty) {
+        data = _extractResponseData(response, expectedHeader);
+      } else {
+        // Legacy fallback with offset
+        final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
+        data = cleaned.length >= 6 ? cleaned.substring(4) : null;
+      }
+      if (data != null && data.length >= 2) {
+        return int.parse(data.substring(0, 2), radix: 16);
       }
     } catch (_) {}
     return null;
   }
 
-  static int? parseTwoBytes(String? response, {int offset = 4}) {
+  static int? parseTwoBytes(String? response, {String expectedHeader = ''}) {
     if (response == null || response.isEmpty || response.contains('NO DATA')) {
       return null;
     }
     try {
-      final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
-      if (cleaned.length >= offset + 4) {
-        final a = int.parse(cleaned.substring(offset, offset + 2), radix: 16);
-        final b = int.parse(
-          cleaned.substring(offset + 2, offset + 4),
-          radix: 16,
-        );
+      String? data;
+      if (expectedHeader.isNotEmpty) {
+        data = _extractResponseData(response, expectedHeader);
+      } else {
+        final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
+        data = cleaned.length >= 8 ? cleaned.substring(4) : null;
+      }
+      if (data != null && data.length >= 4) {
+        final a = int.parse(data.substring(0, 2), radix: 16);
+        final b = int.parse(data.substring(2, 4), radix: 16);
         return (a * 256) + b;
       }
     } catch (_) {}
@@ -77,17 +122,33 @@ abstract class Obd2BaseService {
   }
 
   static DtcSeverity getDTCSeverity(String code) {
-    if (code.startsWith('P0') && (code.contains('3') || code.contains('1'))) {
-      return DtcSeverity.critical;
+    // P0xxx: Powertrain generic - often critical
+    // P03xx: Ignition/misfire - critical
+    // P04xx: Emissions - warning
+    // P01xx: Fuel/air metering - warning to critical
+    // C/B/U codes: chassis/body/network - typically info/warning
+    if (code.startsWith('P03')) return DtcSeverity.critical; // misfire
+    if (code.startsWith('P01')) return DtcSeverity.warning; // fuel/air
+    if (code.startsWith('P02')) return DtcSeverity.warning; // fuel/air
+    if (code.startsWith('P04')) return DtcSeverity.warning; // emissions
+    if (code.startsWith('P05') || code.startsWith('P06')) {
+      return DtcSeverity.warning; // vehicle speed, idle, aux
     }
-    if (code.startsWith('P04') || code.startsWith('P01')) {
-      return DtcSeverity.warning;
+    if (code.startsWith('P0')) return DtcSeverity.warning; // other generic
+    if (code.startsWith('P1') || code.startsWith('P3')) {
+      return DtcSeverity.warning; // manufacturer specific
     }
+    if (code.startsWith('P2')) return DtcSeverity.warning;
+    if (code.startsWith('U')) return DtcSeverity.info; // network
+    if (code.startsWith('B')) return DtcSeverity.info; // body
+    if (code.startsWith('C')) return DtcSeverity.info; // chassis
     return DtcSeverity.info;
   }
 
   static String getDTCDescription(String code, {String locale = 'es'}) {
     return DtcDatabase.getDescription(code, locale) ??
-        (locale == 'es' ? 'Código de diagnóstico: $code' : 'Diagnostic code: $code');
+        (locale == 'es'
+            ? 'Código de diagnóstico: $code'
+            : 'Diagnostic code: $code');
   }
 }

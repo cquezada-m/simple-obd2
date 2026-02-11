@@ -15,10 +15,7 @@ class GeminiService {
 
   static const _baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
 
-  GeminiService({
-    required this.apiKey,
-    this.model = 'gemini-2.0-flash',
-  });
+  GeminiService({required this.apiKey, this.model = 'gemini-2.0-flash'});
 
   /// Genera un diagnóstico AI basado en los parámetros del vehículo,
   /// códigos de falla y la información disponible (VIN, protocolo, etc.).
@@ -43,7 +40,9 @@ class GeminiService {
 
   /// Llama al endpoint generateContent de Gemini.
   Future<String> _generateContent(String prompt) async {
-    final url = Uri.parse('$_baseUrl/models/$model:generateContent?key=$apiKey');
+    final url = Uri.parse(
+      '$_baseUrl/models/$model:generateContent?key=$apiKey',
+    );
 
     final body = jsonEncode({
       'contents': [
@@ -53,10 +52,7 @@ class GeminiService {
           ],
         },
       ],
-      'generationConfig': {
-        'temperature': 0.7,
-        'maxOutputTokens': 1024,
-      },
+      'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 1024},
     });
 
     final response = await http.post(
@@ -99,8 +95,12 @@ class GeminiService {
     final buffer = StringBuffer();
 
     // Rol del sistema
-    buffer.writeln('Eres un mecánico automotriz experto con más de 20 años de experiencia.');
-    buffer.writeln('Tu tarea es analizar los datos de diagnóstico OBD2 de un vehículo y proporcionar un diagnóstico claro y accionable.');
+    buffer.writeln(
+      'Eres un mecánico automotriz experto con más de 20 años de experiencia.',
+    );
+    buffer.writeln(
+      'Tu tarea es analizar los datos de diagnóstico OBD2 de un vehículo y proporcionar un diagnóstico claro y accionable.',
+    );
     buffer.writeln();
 
     // Info del vehículo
@@ -131,16 +131,22 @@ class GeminiService {
     } else {
       for (final dtc in dtcCodes) {
         final dbDesc = DtcDatabase.getDescriptionEs(dtc.code);
-        buffer.writeln('- ${dtc.code}: ${dbDesc ?? dtc.description} (Severidad: ${dtc.severity.name})');
+        buffer.writeln(
+          '- ${dtc.code}: ${dbDesc ?? dtc.description} (Severidad: ${dtc.severity.name})',
+        );
       }
     }
     buffer.writeln();
 
     // Instrucciones de formato
     buffer.writeln('== INSTRUCCIONES ==');
-    buffer.writeln('Responde SIEMPRE en español y usa EXACTAMENTE este formato:');
+    buffer.writeln(
+      'Responde SIEMPRE en español y usa EXACTAMENTE este formato:',
+    );
     buffer.writeln();
-    buffer.writeln('Diagnóstico: [Resumen breve del estado general del vehículo en 2-3 oraciones]');
+    buffer.writeln(
+      'Diagnóstico: [Resumen breve del estado general del vehículo en 2-3 oraciones]',
+    );
     buffer.writeln();
     buffer.writeln('Posibles causas:');
     buffer.writeln('- [Causa 1]');
@@ -192,29 +198,75 @@ class GeminiService {
 
   static String? _wmiToManufacturer(String wmi) {
     const map = {
-      '1HG': 'Honda', '1G1': 'Chevrolet', '1FA': 'Ford', '1FM': 'Ford',
-      '1FT': 'Ford', '1GC': 'Chevrolet', '1GT': 'GMC', '1J4': 'Jeep',
-      '1N4': 'Nissan', '1N6': 'Nissan', '2HG': 'Honda', '2T1': 'Toyota',
-      '3FA': 'Ford', '3VW': 'Volkswagen', '3N1': 'Nissan',
-      '5YJ': 'Tesla', '5NP': 'Hyundai', '5XY': 'Kia',
-      'JHM': 'Honda', 'JTD': 'Toyota', 'JN1': 'Nissan',
-      'KMH': 'Hyundai', 'KNA': 'Kia',
-      'WAU': 'Audi', 'WBA': 'BMW', 'WDB': 'Mercedes-Benz', 'WDD': 'Mercedes-Benz',
-      'WF0': 'Ford (Europa)', 'WVW': 'Volkswagen',
-      'YV1': 'Volvo', 'ZFF': 'Ferrari',
-      '3G1': 'Chevrolet (México)', '3HG': 'Honda (México)',
+      '1HG': 'Honda',
+      '1G1': 'Chevrolet',
+      '1FA': 'Ford',
+      '1FM': 'Ford',
+      '1FT': 'Ford',
+      '1GC': 'Chevrolet',
+      '1GT': 'GMC',
+      '1J4': 'Jeep',
+      '1N4': 'Nissan',
+      '1N6': 'Nissan',
+      '2HG': 'Honda',
+      '2T1': 'Toyota',
+      '3FA': 'Ford',
+      '3VW': 'Volkswagen',
+      '3N1': 'Nissan',
+      '5YJ': 'Tesla',
+      '5NP': 'Hyundai',
+      '5XY': 'Kia',
+      'JHM': 'Honda',
+      'JTD': 'Toyota',
+      'JN1': 'Nissan',
+      'KMH': 'Hyundai',
+      'KNA': 'Kia',
+      'WAU': 'Audi',
+      'WBA': 'BMW',
+      'WDB': 'Mercedes-Benz',
+      'WDD': 'Mercedes-Benz',
+      'WF0': 'Ford (Europa)',
+      'WVW': 'Volkswagen',
+      'YV1': 'Volvo',
+      'ZFF': 'Ferrari',
+      '3G1': 'Chevrolet (México)',
+      '3HG': 'Honda (México)',
     };
     return map[wmi] ?? map[wmi.substring(0, 2)];
   }
 
   static int? _vinYearCode(String c) {
     const codes = {
-      'A': 2010, 'B': 2011, 'C': 2012, 'D': 2013, 'E': 2014,
-      'F': 2015, 'G': 2016, 'H': 2017, 'J': 2018, 'K': 2019,
-      'L': 2020, 'M': 2021, 'N': 2022, 'P': 2023, 'R': 2024,
-      'S': 2025, 'T': 2026, 'V': 2027, 'W': 2028, 'X': 2029,
-      'Y': 2030, '1': 2031, '2': 2032, '3': 2033, '4': 2034,
-      '5': 2035, '6': 2036, '7': 2037, '8': 2038, '9': 2039,
+      'A': 2010,
+      'B': 2011,
+      'C': 2012,
+      'D': 2013,
+      'E': 2014,
+      'F': 2015,
+      'G': 2016,
+      'H': 2017,
+      'J': 2018,
+      'K': 2019,
+      'L': 2020,
+      'M': 2021,
+      'N': 2022,
+      'P': 2023,
+      'R': 2024,
+      'S': 2025,
+      'T': 2026,
+      'V': 2027,
+      'W': 2028,
+      'X': 2029,
+      'Y': 2030,
+      '1': 2031,
+      '2': 2032,
+      '3': 2033,
+      '4': 2034,
+      '5': 2035,
+      '6': 2036,
+      '7': 2037,
+      '8': 2038,
+      '9': 2039,
     };
     return codes[c];
   }

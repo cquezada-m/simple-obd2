@@ -39,7 +39,8 @@ class DiagnosticCodesCard extends StatelessWidget {
                   style: TextButton.styleFrom(
                     foregroundColor: AppTheme.error,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6,
+                      horizontal: 12,
+                      vertical: 6,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
@@ -138,7 +139,8 @@ class DiagnosticCodesCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2,
+                            horizontal: 8,
+                            vertical: 2,
                           ),
                           decoration: BoxDecoration(
                             color: color.withValues(alpha: 0.08),
@@ -174,12 +176,19 @@ class DiagnosticCodesCard extends StatelessWidget {
     );
   }
 
-  (Color, IconData, String) _severityStyle(DtcSeverity severity, AppLocalizations l) {
+  (Color, IconData, String) _severityStyle(
+    DtcSeverity severity,
+    AppLocalizations l,
+  ) {
     switch (severity) {
       case DtcSeverity.critical:
         return (AppTheme.error, Icons.error_rounded, l.severityCritical);
       case DtcSeverity.warning:
-        return (AppTheme.warning, Icons.warning_amber_rounded, l.severityWarning);
+        return (
+          AppTheme.warning,
+          Icons.warning_amber_rounded,
+          l.severityWarning,
+        );
       case DtcSeverity.info:
         return (AppTheme.primary, Icons.info_outline_rounded, l.severityInfo);
     }

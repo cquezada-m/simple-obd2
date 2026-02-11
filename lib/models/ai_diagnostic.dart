@@ -30,7 +30,9 @@ class AiDiagnostic {
     for (final line in lines) {
       final lower = line.toLowerCase().trim();
 
-      if (lower.startsWith('resumen') || lower.startsWith('diagnóstico') || lower.startsWith('diagnostico')) {
+      if (lower.startsWith('resumen') ||
+          lower.startsWith('diagnóstico') ||
+          lower.startsWith('diagnostico')) {
         current = _Section.summary;
         final after = _extractAfterColon(line);
         if (after.isNotEmpty) summary = after;
@@ -40,17 +42,22 @@ class AiDiagnostic {
         current = _Section.causes;
         continue;
       }
-      if (lower.startsWith('puntos a revisar') || lower.startsWith('puntos de revisión') || lower.startsWith('revisión') || lower.startsWith('revision')) {
+      if (lower.startsWith('puntos a revisar') ||
+          lower.startsWith('puntos de revisión') ||
+          lower.startsWith('revisión') ||
+          lower.startsWith('revision')) {
         current = _Section.checks;
         continue;
       }
-      if (lower.startsWith('urgencia') || lower.startsWith('nivel de urgencia')) {
+      if (lower.startsWith('urgencia') ||
+          lower.startsWith('nivel de urgencia')) {
         urgency = _extractAfterColon(line);
         if (urgency.isEmpty) urgency = 'Media';
         current = _Section.none;
         continue;
       }
-      if (lower.startsWith('costo estimado') || lower.startsWith('coste estimado')) {
+      if (lower.startsWith('costo estimado') ||
+          lower.startsWith('coste estimado')) {
         cost = _extractAfterColon(line);
         if (cost.isEmpty) cost = 'No estimado';
         current = _Section.none;

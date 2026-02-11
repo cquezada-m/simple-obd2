@@ -139,7 +139,8 @@ class AiRecommendationsCard extends StatelessWidget {
                 .map(
                   (c) => Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4,
+                      horizontal: 8,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.7),
@@ -191,6 +192,7 @@ class AiRecommendationsCard extends StatelessWidget {
       ),
     );
   }
+
   Widget _buildDisclaimer(AppLocalizations l) {
     return Container(
       padding: const EdgeInsets.all(12),

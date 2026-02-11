@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import '../models/dtc_code.dart';
 import 'obd2_base_service.dart';
+import 'wifi_obd2_service.dart';
 
 class Obd2Service implements Obd2BaseService {
   BluetoothConnection? _connection;
@@ -90,98 +91,46 @@ class Obd2Service implements Obd2BaseService {
   @override
   Future<int?> getRPM() async {
     final response = await _sendCommand('010C');
-    if (response == null || response.isEmpty || response.contains('NO DATA')) {
-      return null;
-    }
-    try {
-      final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
-      if (cleaned.length >= 8) {
-        final a = int.parse(cleaned.substring(4, 6), radix: 16);
-        final b = int.parse(cleaned.substring(6, 8), radix: 16);
-        return ((a * 256) + b) ~/ 4;
-      }
-    } catch (_) {}
-    return null;
+    final raw = Obd2BaseService.parseTwoBytes(response, expectedHeader: '410C');
+    return raw != null ? raw ~/ 4 : null;
   }
 
   /// Lee velocidad: PID 010D
   @override
   Future<int?> getSpeed() async {
     final response = await _sendCommand('010D');
-    if (response == null || response.isEmpty || response.contains('NO DATA')) {
-      return null;
-    }
-    try {
-      final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
-      if (cleaned.length >= 6) {
-        return int.parse(cleaned.substring(4, 6), radix: 16);
-      }
-    } catch (_) {}
-    return null;
+    return Obd2BaseService.parseOneByte(response, expectedHeader: '410D');
   }
 
   /// Lee temperatura del motor: PID 0105
   @override
   Future<int?> getCoolantTemp() async {
     final response = await _sendCommand('0105');
-    if (response == null || response.isEmpty || response.contains('NO DATA')) {
-      return null;
-    }
-    try {
-      final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
-      if (cleaned.length >= 6) {
-        return int.parse(cleaned.substring(4, 6), radix: 16) - 40;
-      }
-    } catch (_) {}
-    return null;
+    final raw = Obd2BaseService.parseOneByte(response, expectedHeader: '4105');
+    return raw != null ? raw - 40 : null;
   }
 
   /// Lee carga del motor: PID 0104
   @override
   Future<int?> getEngineLoad() async {
     final response = await _sendCommand('0104');
-    if (response == null || response.isEmpty || response.contains('NO DATA')) {
-      return null;
-    }
-    try {
-      final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
-      if (cleaned.length >= 6) {
-        return (int.parse(cleaned.substring(4, 6), radix: 16) * 100) ~/ 255;
-      }
-    } catch (_) {}
-    return null;
+    final raw = Obd2BaseService.parseOneByte(response, expectedHeader: '4104');
+    return raw != null ? (raw * 100) ~/ 255 : null;
   }
 
   /// Lee presión del colector de admisión: PID 010B
   @override
   Future<int?> getIntakeManifoldPressure() async {
     final response = await _sendCommand('010B');
-    if (response == null || response.isEmpty || response.contains('NO DATA')) {
-      return null;
-    }
-    try {
-      final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
-      if (cleaned.length >= 6) {
-        return int.parse(cleaned.substring(4, 6), radix: 16);
-      }
-    } catch (_) {}
-    return null;
+    return Obd2BaseService.parseOneByte(response, expectedHeader: '410B');
   }
 
   /// Lee nivel de combustible: PID 012F
   @override
   Future<int?> getFuelLevel() async {
     final response = await _sendCommand('012F');
-    if (response == null || response.isEmpty || response.contains('NO DATA')) {
-      return null;
-    }
-    try {
-      final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
-      if (cleaned.length >= 6) {
-        return (int.parse(cleaned.substring(4, 6), radix: 16) * 100) ~/ 255;
-      }
-    } catch (_) {}
-    return null;
+    final raw = Obd2BaseService.parseOneByte(response, expectedHeader: '412F');
+    return raw != null ? (raw * 100) ~/ 255 : null;
   }
 
   /// Lee VIN: PID 0902
@@ -192,12 +141,7 @@ class Obd2Service implements Obd2BaseService {
       return null;
     }
     try {
-      final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
-      final bytes = <int>[];
-      for (var i = 0; i < cleaned.length - 1; i += 2) {
-        bytes.add(int.parse(cleaned.substring(i, i + 2), radix: 16));
-      }
-      return String.fromCharCodes(bytes.where((b) => b >= 32 && b <= 126));
+      return WifiObd2Service.parseVIN(response);
     } catch (_) {}
     return null;
   }
@@ -216,24 +160,7 @@ class Obd2Service implements Obd2BaseService {
     if (response == null || response.isEmpty || response.contains('NO DATA')) {
       return [];
     }
-
-    final codes = <DtcCode>[];
-    final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
-
-    for (var i = 0; i < cleaned.length - 3; i += 4) {
-      final dtcHex = cleaned.substring(i, i + 4);
-      final code = _decodeDTC(dtcHex);
-      if (code != null && code.isNotEmpty) {
-        codes.add(
-          DtcCode(
-            code: code,
-            description: Obd2BaseService.getDTCDescription(code),
-            severity: Obd2BaseService.getDTCSeverity(code),
-          ),
-        );
-      }
-    }
-    return codes;
+    return WifiObd2Service.parseDTCResponse(response);
   }
 
   /// Borra códigos DTC
@@ -241,30 +168,6 @@ class Obd2Service implements Obd2BaseService {
   Future<bool> clearDTCs() async {
     final response = await _sendCommand('04');
     return response != null && !response.contains('ERROR');
-  }
-
-  String? _decodeDTC(String hex) {
-    if (hex.length < 4 || hex == '0000') return null;
-    final firstChar = int.parse(hex[0], radix: 16);
-    final prefix = [
-      'P0',
-      'P1',
-      'P2',
-      'P3',
-      'C0',
-      'C1',
-      'C2',
-      'C3',
-      'B0',
-      'B1',
-      'B2',
-      'B3',
-      'U0',
-      'U1',
-      'U2',
-      'U3',
-    ];
-    return '${prefix[firstChar]}${hex.substring(1)}';
   }
 
   @override

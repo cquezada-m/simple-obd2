@@ -77,40 +77,40 @@ class WifiObd2Service implements Obd2BaseService {
   @override
   Future<int?> getRPM() async {
     final response = await _sendCommand('010C');
-    final raw = Obd2BaseService.parseTwoBytes(response);
+    final raw = Obd2BaseService.parseTwoBytes(response, expectedHeader: '410C');
     return raw != null ? raw ~/ 4 : null;
   }
 
   @override
   Future<int?> getSpeed() async {
     final response = await _sendCommand('010D');
-    return Obd2BaseService.parseOneByte(response);
+    return Obd2BaseService.parseOneByte(response, expectedHeader: '410D');
   }
 
   @override
   Future<int?> getCoolantTemp() async {
     final response = await _sendCommand('0105');
-    final raw = Obd2BaseService.parseOneByte(response);
+    final raw = Obd2BaseService.parseOneByte(response, expectedHeader: '4105');
     return raw != null ? raw - 40 : null;
   }
 
   @override
   Future<int?> getEngineLoad() async {
     final response = await _sendCommand('0104');
-    final raw = Obd2BaseService.parseOneByte(response);
+    final raw = Obd2BaseService.parseOneByte(response, expectedHeader: '4104');
     return raw != null ? (raw * 100) ~/ 255 : null;
   }
 
   @override
   Future<int?> getIntakeManifoldPressure() async {
     final response = await _sendCommand('010B');
-    return Obd2BaseService.parseOneByte(response);
+    return Obd2BaseService.parseOneByte(response, expectedHeader: '410B');
   }
 
   @override
   Future<int?> getFuelLevel() async {
     final response = await _sendCommand('012F');
-    final raw = Obd2BaseService.parseOneByte(response);
+    final raw = Obd2BaseService.parseOneByte(response, expectedHeader: '412F');
     return raw != null ? (raw * 100) ~/ 255 : null;
   }
 
@@ -121,14 +121,69 @@ class WifiObd2Service implements Obd2BaseService {
       return null;
     }
     try {
-      final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
-      final bytes = <int>[];
-      for (var i = 0; i < cleaned.length - 1; i += 2) {
-        bytes.add(int.parse(cleaned.substring(i, i + 2), radix: 16));
-      }
-      return String.fromCharCodes(bytes.where((b) => b >= 32 && b <= 126));
+      return parseVIN(response);
     } catch (_) {}
     return null;
+  }
+
+  /// Parses VIN from multi-line OBD2 response (Mode 09 PID 02).
+  /// Handles both ISO 15765 (CAN) and ISO 14230 / J1850 formats.
+  static String? parseVIN(String raw) {
+    // Split into lines and process each
+    final lines = raw
+        .split(RegExp(r'[\r\n]+'))
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty && !l.startsWith('SEARCHING'))
+        .toList();
+
+    final dataBytes = <int>[];
+
+    for (final line in lines) {
+      final hex = line.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
+      if (hex.isEmpty) continue;
+
+      // Convert to byte list
+      final bytes = <int>[];
+      for (var i = 0; i + 1 < hex.length; i += 2) {
+        bytes.add(int.parse(hex.substring(i, i + 2), radix: 16));
+      }
+
+      if (bytes.isEmpty) continue;
+
+      // CAN format: first line starts with 49 02 01, continuation with 49 02 0x
+      // or multi-frame: 10 14 49 02 01 ... then 21 ... 22 ...
+      if (bytes.length >= 3 && bytes[0] == 0x49 && bytes[1] == 0x02) {
+        // Standard CAN response: skip 49 02 XX (3 bytes header)
+        dataBytes.addAll(bytes.skip(3));
+      } else if (bytes.length >= 5 &&
+          bytes[0] == 0x10 &&
+          bytes[2] == 0x49 &&
+          bytes[3] == 0x02) {
+        // CAN multi-frame first frame: 10 XX 49 02 01 [data...]
+        dataBytes.addAll(bytes.skip(5));
+      } else if (bytes.isNotEmpty && (bytes[0] & 0xF0) == 0x20) {
+        // CAN consecutive frame: 2X [data...]
+        dataBytes.addAll(bytes.skip(1));
+      } else {
+        // Fallback: try to extract printable ASCII
+        dataBytes.addAll(bytes);
+      }
+    }
+
+    // Filter to valid VIN characters (alphanumeric, no I/O/Q)
+    final vinChars = dataBytes
+        .where((b) => b >= 0x20 && b <= 0x7E)
+        .map((b) => String.fromCharCode(b))
+        .where((c) => RegExp(r'[A-HJ-NPR-Z0-9]').hasMatch(c))
+        .toList();
+
+    final vin = vinChars.join();
+
+    // A valid VIN is exactly 17 characters
+    if (vin.length >= 17) {
+      return vin.substring(0, 17);
+    }
+    return vin.isNotEmpty ? vin : null;
   }
 
   @override
@@ -143,14 +198,71 @@ class WifiObd2Service implements Obd2BaseService {
     if (response == null || response.isEmpty || response.contains('NO DATA')) {
       return [];
     }
+    return parseDTCResponse(response);
+  }
 
+  /// Parses DTC response from Mode 03.
+  /// Response header is 43 followed by a count byte, then pairs of DTC bytes.
+  /// Format: 43 [count] [DTC1_high] [DTC1_low] [DTC2_high] [DTC2_low] ...
+  static List<DtcCode> parseDTCResponse(String raw) {
     final codes = <DtcCode>[];
-    final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
+    final lines = raw
+        .split(RegExp(r'[\r\n]+'))
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty && !l.startsWith('SEARCHING'))
+        .toList();
 
-    for (var i = 0; i < cleaned.length - 3; i += 4) {
-      final dtcHex = cleaned.substring(i, i + 4);
+    final dtcBytes = <int>[];
+    int? dtcCount;
+
+    for (final line in lines) {
+      final hex = line.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
+      if (hex.isEmpty) continue;
+
+      final bytes = <int>[];
+      for (var i = 0; i + 1 < hex.length; i += 2) {
+        bytes.add(int.parse(hex.substring(i, i + 2), radix: 16));
+      }
+
+      if (bytes.isEmpty) continue;
+
+      // CAN multi-frame first frame: 10 XX 43 [count] [data...]
+      if (bytes.length >= 4 && bytes[0] == 0x10 && bytes[2] == 0x43) {
+        dtcCount = bytes[3];
+        dtcBytes.addAll(bytes.skip(4));
+      }
+      // Standard response: 43 [count] [DTC pairs...]
+      else if (bytes.isNotEmpty && bytes[0] == 0x43) {
+        if (bytes.length >= 2) {
+          dtcCount = bytes[1];
+          dtcBytes.addAll(bytes.skip(2));
+        }
+      }
+      // CAN consecutive frame: 2X [data...]
+      else if (bytes.isNotEmpty && (bytes[0] & 0xF0) == 0x20) {
+        dtcBytes.addAll(bytes.skip(1));
+      }
+      // Ignore any other lines (echoes, protocol noise, etc.)
+    }
+
+    // If the ECU reported 0 DTCs, return empty
+    if (dtcCount != null && dtcCount == 0) return [];
+
+    // Determine how many DTCs to parse
+    final maxDtcs = dtcCount ?? (dtcBytes.length ~/ 2);
+
+    // Each DTC is 2 bytes
+    int parsed = 0;
+    for (var i = 0; i + 1 < dtcBytes.length && parsed < maxDtcs; i += 2) {
+      final high = dtcBytes[i];
+      final low = dtcBytes[i + 1];
+      if (high == 0 && low == 0) continue; // padding
+
+      final dtcHex =
+          high.toRadixString(16).padLeft(2, '0') +
+          low.toRadixString(16).padLeft(2, '0');
       final code = Obd2BaseService.decodeDTC(dtcHex);
-      if (code != null && code.isNotEmpty) {
+      if (code != null) {
         codes.add(
           DtcCode(
             code: code,
@@ -158,6 +270,7 @@ class WifiObd2Service implements Obd2BaseService {
             severity: Obd2BaseService.getDTCSeverity(code),
           ),
         );
+        parsed++;
       }
     }
     return codes;

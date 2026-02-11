@@ -194,7 +194,11 @@ class _HomeScreenState extends State<HomeScreen>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.language_rounded, size: 16, color: AppTheme.primary),
+            const Icon(
+              Icons.language_rounded,
+              size: 16,
+              color: AppTheme.primary,
+            ),
             const SizedBox(width: 4),
             Text(
               langProvider.locale.toUpperCase(),
@@ -303,7 +307,9 @@ class _HomeScreenState extends State<HomeScreen>
                       isClearing: provider.isClearing,
                     ),
                     AiRecommendationsCard(
-                      recommendations: provider.getRecommendations(locale: l.locale),
+                      recommendations: provider.getRecommendations(
+                        locale: l.locale,
+                      ),
                     ),
                   ],
                 ),
@@ -314,7 +320,9 @@ class _HomeScreenState extends State<HomeScreen>
                   children: [
                     LiveParametersCard(parameters: provider.liveParams),
                     AiRecommendationsCard(
-                      recommendations: provider.getRecommendations(locale: l.locale),
+                      recommendations: provider.getRecommendations(
+                        locale: l.locale,
+                      ),
                     ),
                   ],
                 ),
@@ -331,7 +339,8 @@ class _HomeScreenState extends State<HomeScreen>
     final dtcHeight = provider.dtcCodes.isEmpty
         ? 250.0
         : (provider.dtcCodes.length * 100.0 + 120);
-    final recHeight = provider.getRecommendations(locale: locale).length * 280.0 + 160;
+    final recHeight =
+        provider.getRecommendations(locale: locale).length * 280.0 + 160;
     final liveHeight = 420.0;
     final diagTab = dtcHeight + recHeight;
     final liveTab = liveHeight + recHeight;
