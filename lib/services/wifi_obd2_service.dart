@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import '../models/dtc_code.dart';
+import 'app_logger.dart';
 import 'obd2_base_service.dart';
 
 /// Servicio OBD2 via WiFi (TCP Socket).
@@ -20,32 +21,54 @@ class WifiObd2Service implements Obd2BaseService {
   @override
   bool get isConnected => _connected && _socket != null;
 
+  static final _log = AppLogger.instance;
+
   /// Conecta al adaptador OBD2 WiFi via TCP socket
   Future<void> connect({
     String host = defaultHost,
     int port = defaultPort,
     Duration timeout = const Duration(seconds: 10),
   }) async {
+    _log.log(
+      LogCategory.connection,
+      'WiFi: connecting to $host:$port (timeout: ${timeout.inSeconds}s)',
+    );
     try {
       _socket = await Socket.connect(host, port, timeout: timeout);
     } on SocketException catch (e) {
       _connected = false;
+      _log.log(
+        LogCategory.error,
+        'WiFi: connection failed to $host:$port',
+        '$e',
+      );
       throw Exception(
         'No se pudo conectar a $host:$port. '
         'Verifica la conexión WiFi al adaptador OBD2. ($e)',
       );
     }
     _connected = true;
+    _log.log(
+      LogCategory.connection,
+      'WiFi: TCP socket connected to $host:$port',
+    );
 
     _socket!.listen(
       (data) {
         _buffer += utf8.decode(data, allowMalformed: true);
       },
-      onError: (_) => disconnect(),
-      onDone: () => disconnect(),
+      onError: (e) {
+        _log.log(LogCategory.error, 'WiFi: socket error', '$e');
+        disconnect();
+      },
+      onDone: () {
+        _log.log(LogCategory.connection, 'WiFi: socket closed by adapter');
+        disconnect();
+      },
     );
 
     // Inicializar ELM327
+    _log.log(LogCategory.connection, 'WiFi: initializing ELM327');
     await _sendCommand('ATZ');
     await Future.delayed(const Duration(seconds: 1));
     await _sendCommand('ATE0');
@@ -53,10 +76,12 @@ class WifiObd2Service implements Obd2BaseService {
     await _sendCommand('ATS0');
     await _sendCommand('ATH0');
     await _sendCommand('ATSP0');
+    _log.log(LogCategory.connection, 'WiFi: ELM327 initialized');
   }
 
   @override
   Future<void> disconnect() async {
+    _log.log(LogCategory.connection, 'WiFi: disconnecting');
     _connected = false;
     await _socket?.close();
     _socket?.destroy();
@@ -70,6 +95,7 @@ class WifiObd2Service implements Obd2BaseService {
     _buffer = '';
     _socket!.add(utf8.encode('$command\r'));
     await _socket!.flush();
+    _log.log(LogCategory.command, 'WiFi TX: $command');
 
     // Esperar hasta que llegue el prompt '>' o timeout
     final stopwatch = Stopwatch()..start();
@@ -79,6 +105,11 @@ class WifiObd2Service implements Obd2BaseService {
 
     final response = _buffer.trim().replaceAll('>', '');
     _buffer = '';
+    final elapsed = stopwatch.elapsedMilliseconds;
+    _log.log(
+      LogCategory.command,
+      'WiFi RX (${elapsed}ms): ${response.isEmpty ? "<empty>" : response}',
+    );
     return response.isEmpty ? null : response;
   }
 
@@ -86,51 +117,74 @@ class WifiObd2Service implements Obd2BaseService {
   Future<int?> getRPM() async {
     final response = await _sendCommand('010C');
     final raw = Obd2BaseService.parseTwoBytes(response, expectedHeader: '410C');
-    return raw != null ? raw ~/ 4 : null;
+    final rpm = raw != null ? raw ~/ 4 : null;
+    _log.log(LogCategory.parse, 'RPM: raw=$raw, value=$rpm');
+    return rpm;
   }
 
   @override
   Future<int?> getSpeed() async {
     final response = await _sendCommand('010D');
-    return Obd2BaseService.parseOneByte(response, expectedHeader: '410D');
+    final speed = Obd2BaseService.parseOneByte(
+      response,
+      expectedHeader: '410D',
+    );
+    _log.log(LogCategory.parse, 'Speed: $speed km/h');
+    return speed;
   }
 
   @override
   Future<int?> getCoolantTemp() async {
     final response = await _sendCommand('0105');
     final raw = Obd2BaseService.parseOneByte(response, expectedHeader: '4105');
-    return raw != null ? raw - 40 : null;
+    final temp = raw != null ? raw - 40 : null;
+    _log.log(LogCategory.parse, 'Coolant temp: raw=$raw, value=$temp°C');
+    return temp;
   }
 
   @override
   Future<int?> getEngineLoad() async {
     final response = await _sendCommand('0104');
     final raw = Obd2BaseService.parseOneByte(response, expectedHeader: '4104');
-    return raw != null ? (raw * 100) ~/ 255 : null;
+    final load = raw != null ? (raw * 100) ~/ 255 : null;
+    _log.log(LogCategory.parse, 'Engine load: raw=$raw, value=$load%');
+    return load;
   }
 
   @override
   Future<int?> getIntakeManifoldPressure() async {
     final response = await _sendCommand('010B');
-    return Obd2BaseService.parseOneByte(response, expectedHeader: '410B');
+    final pressure = Obd2BaseService.parseOneByte(
+      response,
+      expectedHeader: '410B',
+    );
+    _log.log(LogCategory.parse, 'Intake pressure: $pressure kPa');
+    return pressure;
   }
 
   @override
   Future<int?> getFuelLevel() async {
     final response = await _sendCommand('012F');
     final raw = Obd2BaseService.parseOneByte(response, expectedHeader: '412F');
-    return raw != null ? (raw * 100) ~/ 255 : null;
+    final fuel = raw != null ? (raw * 100) ~/ 255 : null;
+    _log.log(LogCategory.parse, 'Fuel level: raw=$raw, value=$fuel%');
+    return fuel;
   }
 
   @override
   Future<String?> getVIN() async {
     final response = await _sendCommand('0902');
     if (response == null || response.isEmpty || response.contains('NO DATA')) {
+      _log.log(LogCategory.vin, 'VIN: no data');
       return null;
     }
     try {
-      return parseVIN(response);
-    } catch (_) {}
+      final vin = parseVIN(response);
+      _log.log(LogCategory.vin, 'VIN decoded: $vin', 'Raw: $response');
+      return vin;
+    } catch (e) {
+      _log.log(LogCategory.error, 'VIN: parse error', '$e | Raw: $response');
+    }
     return null;
   }
 
@@ -204,9 +258,16 @@ class WifiObd2Service implements Obd2BaseService {
   Future<List<DtcCode>> getDTCs() async {
     final response = await _sendCommand('03');
     if (response == null || response.isEmpty || response.contains('NO DATA')) {
+      _log.log(LogCategory.dtc, 'DTCs: no active codes');
       return [];
     }
-    return parseDTCResponse(response);
+    final codes = parseDTCResponse(response);
+    _log.log(
+      LogCategory.dtc,
+      'DTCs found: ${codes.length}',
+      codes.map((c) => '${c.code} (${c.severity.name})').join(', '),
+    );
+    return codes;
   }
 
   /// Parses DTC response from Mode 03.
@@ -286,8 +347,15 @@ class WifiObd2Service implements Obd2BaseService {
 
   @override
   Future<bool> clearDTCs() async {
+    _log.log(LogCategory.dtc, 'Sending clear DTCs command');
     final response = await _sendCommand('04');
-    return response != null && !response.contains('ERROR');
+    final success = response != null && !response.contains('ERROR');
+    _log.log(
+      LogCategory.dtc,
+      'Clear DTCs: ${success ? "OK" : "FAILED"}',
+      'Response: $response',
+    );
+    return success;
   }
 
   @override

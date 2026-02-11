@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/language_provider.dart';
 import '../providers/obd2_provider.dart';
 import '../screens/privacy_policy_screen.dart';
+import '../screens/log_viewer_screen.dart';
 import '../theme/app_theme.dart';
 import '../widgets/connection_card.dart';
 import '../widgets/vehicle_info_card.dart';
@@ -244,6 +245,29 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
           _buildLanguageToggle(),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LogViewerScreen()),
+            ),
+            child: Semantics(
+              label: 'Logs',
+              button: true,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.purple.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.terminal_rounded,
+                  size: 18,
+                  color: AppTheme.purple,
+                ),
+              ),
+            ),
+          ),
           const SizedBox(width: 8),
           GestureDetector(
             onTap: () => Navigator.push(

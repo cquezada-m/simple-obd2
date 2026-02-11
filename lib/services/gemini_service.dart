@@ -4,6 +4,7 @@ import '../models/ai_diagnostic.dart';
 import '../models/dtc_code.dart';
 import '../models/vehicle_parameter.dart';
 import '../data/dtc_database.dart';
+import 'app_logger.dart';
 
 /// Cliente para la API REST de Gemini (Google Generative AI).
 ///
@@ -17,6 +18,8 @@ class GeminiService {
 
   GeminiService({required this.apiKey, this.model = 'gemini-2.0-flash'});
 
+  static final _log = AppLogger.instance;
+
   /// Genera un diagnóstico AI basado en los parámetros del vehículo,
   /// códigos de falla y la información disponible (VIN, protocolo, etc.).
   Future<AiDiagnostic> getDiagnostic({
@@ -26,6 +29,12 @@ class GeminiService {
     String? protocol,
     int? ecuCount,
   }) async {
+    _log.log(
+      LogCategory.ai,
+      'Requesting AI diagnostic',
+      'VIN: $vin, DTCs: ${dtcCodes.length}, Params: ${parameters.length}',
+    );
+
     final prompt = _buildPrompt(
       parameters: parameters,
       dtcCodes: dtcCodes,
@@ -35,7 +44,17 @@ class GeminiService {
     );
 
     final responseText = await _generateContent(prompt);
-    return AiDiagnostic.fromGeminiResponse(responseText);
+    _log.log(
+      LogCategory.ai,
+      'AI response received (${responseText.length} chars)',
+    );
+    final diagnostic = AiDiagnostic.fromGeminiResponse(responseText);
+    _log.log(
+      LogCategory.ai,
+      'AI diagnostic parsed',
+      'Urgencia: ${diagnostic.urgencyLevel}, Causas: ${diagnostic.possibleCauses.length}',
+    );
+    return diagnostic;
   }
 
   /// Llama al endpoint generateContent de Gemini.
@@ -43,6 +62,8 @@ class GeminiService {
     final url = Uri.parse(
       '$_baseUrl/models/$model:generateContent?key=$apiKey',
     );
+
+    _log.log(LogCategory.ai, 'Gemini API: sending request', 'Model: $model');
 
     final body = jsonEncode({
       'contents': [
@@ -62,11 +83,20 @@ class GeminiService {
     );
 
     if (response.statusCode != 200) {
+      _log.log(
+        LogCategory.error,
+        'Gemini API: error ${response.statusCode}',
+        response.body,
+      );
       throw GeminiException(
         'Error en la API de Gemini (${response.statusCode}): ${response.body}',
       );
     }
 
+    _log.log(
+      LogCategory.ai,
+      'Gemini API: response OK (${response.statusCode})',
+    );
     final json = jsonDecode(response.body) as Map<String, dynamic>;
     final candidates = json['candidates'] as List<dynamic>?;
 

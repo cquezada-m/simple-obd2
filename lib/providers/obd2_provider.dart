@@ -14,6 +14,7 @@ import '../services/secure_storage_service.dart';
 import '../services/obd2_base_service.dart';
 import '../services/obd2_service.dart';
 import '../services/wifi_obd2_service.dart';
+import '../services/app_logger.dart';
 import '../theme/app_theme.dart';
 
 enum ConnectionState { disconnected, connecting, connected }
@@ -25,6 +26,8 @@ class Obd2Provider extends ChangeNotifier {
   final WifiObd2Service _wifiService = WifiObd2Service();
   Timer? _fastPollingTimer; // RPM, Speed – every 200ms
   Timer? _slowPollingTimer; // Temp, Load, Pressure, Fuel – every 5s
+
+  static final _log = AppLogger.instance;
 
   ConnectionState connectionState = ConnectionState.disconnected;
   ConnectionMode? activeMode;
@@ -99,10 +102,13 @@ class Obd2Provider extends ChangeNotifier {
         protocol: protocol,
         ecuCount: ecuCount,
       );
+      _log.log(LogCategory.ai, 'Provider: AI diagnostic received');
     } on GeminiException catch (e) {
       aiDiagnosticError = e.message;
+      _log.log(LogCategory.error, 'Provider: Gemini error', e.message);
     } catch (e) {
       aiDiagnosticError = 'Error al obtener diagnóstico AI: $e';
+      _log.log(LogCategory.error, 'Provider: AI generic error', '$e');
     } finally {
       isLoadingAiDiagnostic = false;
       notifyListeners();
@@ -209,6 +215,10 @@ class Obd2Provider extends ChangeNotifier {
   }
 
   Future<void> connectBluetooth(BluetoothDevice device) async {
+    _log.log(
+      LogCategory.connection,
+      'Provider: starting BT connection to ${device.name}',
+    );
     connectionState = ConnectionState.connecting;
     activeMode = ConnectionMode.bluetooth;
     connectionError = null;
@@ -221,6 +231,7 @@ class Obd2Provider extends ChangeNotifier {
       connectionState = ConnectionState.disconnected;
       connectionError = 'No se pudo conectar via Bluetooth: $e';
       activeMode = null;
+      _log.log(LogCategory.error, 'Provider: BT connection failed', '$e');
     }
     notifyListeners();
   }
@@ -235,6 +246,10 @@ class Obd2Provider extends ChangeNotifier {
 
     final targetHost = host ?? wifiHost;
     final targetPort = port ?? wifiPort;
+    _log.log(
+      LogCategory.connection,
+      'Provider: starting WiFi connection to $targetHost:$targetPort',
+    );
 
     try {
       await _wifiService.connect(host: targetHost, port: targetPort);
@@ -245,6 +260,7 @@ class Obd2Provider extends ChangeNotifier {
           'No se pudo conectar via WiFi a $targetHost:$targetPort. '
           'Verifica que tu dispositivo este conectado a la red WiFi del adaptador OBD2.';
       activeMode = null;
+      _log.log(LogCategory.error, 'Provider: WiFi connection failed', '$e');
     }
     notifyListeners();
   }
@@ -253,6 +269,10 @@ class Obd2Provider extends ChangeNotifier {
 
   Future<void> _onConnected() async {
     connectionState = ConnectionState.connected;
+    _log.log(
+      LogCategory.connection,
+      'Provider: connected, reading initial data',
+    );
 
     final service = _activeService!;
     try {
@@ -260,7 +280,13 @@ class Obd2Provider extends ChangeNotifier {
       protocol = await service.getProtocol() ?? 'Auto';
       ecuCount = 1;
       dtcCodes = await service.getDTCs();
+      _log.log(
+        LogCategory.connection,
+        'Provider: initial data read',
+        'VIN: $vin, Protocolo: $protocol, DTCs: ${dtcCodes.length}',
+      );
     } catch (e) {
+      _log.log(LogCategory.error, 'Provider: error reading initial data', '$e');
       debugPrint('Error reading initial vehicle data: $e');
       vin = 'No disponible';
       protocol = 'Auto';
@@ -274,6 +300,7 @@ class Obd2Provider extends ChangeNotifier {
   // ── Mock ─────────────────────────────────────────────────
 
   Future<void> connectMock() async {
+    _log.log(LogCategory.connection, 'Provider: starting MOCK mode');
     connectionState = ConnectionState.connecting;
     useMockData = true;
     connectionError = null;
@@ -359,12 +386,21 @@ class Obd2Provider extends ChangeNotifier {
       ),
     ];
     _startMockPolling();
+    _log.log(
+      LogCategory.connection,
+      'Provider: MOCK mode active',
+      'VIN: $vin, DTCs: ${dtcCodes.length}',
+    );
     notifyListeners();
   }
 
   // ── Desconexión ──────────────────────────────────────────
 
   void disconnect() {
+    _log.log(
+      LogCategory.connection,
+      'Provider: disconnecting (mode: ${activeMode?.name ?? "mock"})',
+    );
     _cancelPolling();
     if (!useMockData) {
       _activeService?.disconnect();
@@ -409,6 +445,7 @@ class Obd2Provider extends ChangeNotifier {
     _cancelPolling();
     final service = _activeService;
     if (service == null) return;
+    _log.log(LogCategory.parameter, 'Polling: starting (fast=200ms, slow=5s)');
 
     // Fast tier: RPM + Speed every 200ms
     _fastPollingTimer = Timer.periodic(const Duration(milliseconds: 200), (
@@ -434,6 +471,7 @@ class Obd2Provider extends ChangeNotifier {
         ];
         notifyListeners();
       } catch (e) {
+        _log.log(LogCategory.error, 'Fast polling error', '$e');
         debugPrint('Fast polling error: $e');
       }
     });
@@ -475,6 +513,7 @@ class Obd2Provider extends ChangeNotifier {
       ];
       notifyListeners();
     } catch (e) {
+      _log.log(LogCategory.error, 'Slow polling error', '$e');
       debugPrint('Slow polling error: $e');
     }
   }

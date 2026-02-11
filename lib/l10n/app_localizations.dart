@@ -194,6 +194,21 @@ class AppLocalizations {
 
   // ── Language ──
   String get languageLabel => _t('Idioma', 'Language');
+
+  // ── Logs ──
+  String get logsTitle => _t('Registro de Actividad', 'Activity Log');
+  String get logsEmpty => _t('Sin registros aún', 'No logs yet');
+  String get logsClear => _t('Limpiar', 'Clear');
+  String get logsCopied =>
+      _t('Logs copiados al portapapeles', 'Logs copied to clipboard');
+  String get logsExport => _t('Copiar todo', 'Copy all');
+  String get logsFilterAll => _t('Todos', 'All');
+  String get logsFilterConnection => _t('Conexión', 'Connection');
+  String get logsFilterCommand => _t('Comandos', 'Commands');
+  String get logsFilterParse => _t('Parseo', 'Parsing');
+  String get logsFilterDtc => _t('DTC', 'DTC');
+  String get logsFilterAi => _t('AI', 'AI');
+  String get logsFilterError => _t('Errores', 'Errors');
   String get spanish => _t('Español', 'Spanish');
   String get english => _t('Inglés', 'English');
 
