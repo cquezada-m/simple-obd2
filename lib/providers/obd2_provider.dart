@@ -23,7 +23,8 @@ enum ConnectionMode { bluetooth, wifi }
 class Obd2Provider extends ChangeNotifier {
   final Obd2Service _btService = Obd2Service();
   final WifiObd2Service _wifiService = WifiObd2Service();
-  Timer? _pollingTimer;
+  Timer? _fastPollingTimer; // RPM, Speed – every 200ms
+  Timer? _slowPollingTimer; // Temp, Load, Pressure, Fuel – every 5s
 
   ConnectionState connectionState = ConnectionState.disconnected;
   ConnectionMode? activeMode;
@@ -364,7 +365,7 @@ class Obd2Provider extends ChangeNotifier {
   // ── Desconexión ──────────────────────────────────────────
 
   void disconnect() {
-    _pollingTimer?.cancel();
+    _cancelPolling();
     if (!useMockData) {
       _activeService?.disconnect();
     }
@@ -397,23 +398,26 @@ class Obd2Provider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Polling ────────────────────────────────────────────────
+  // ── Polling (tiered: fast 200ms for RPM/Speed, slow 5s for the rest) ──
+
+  void _cancelPolling() {
+    _fastPollingTimer?.cancel();
+    _slowPollingTimer?.cancel();
+  }
 
   void _startPolling() {
-    _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
-      if (!isConnected || useMockData) return;
-      final service = _activeService;
-      if (service == null) return;
+    _cancelPolling();
+    final service = _activeService;
+    if (service == null) return;
 
+    // Fast tier: RPM + Speed every 200ms
+    _fastPollingTimer = Timer.periodic(const Duration(milliseconds: 200), (
+      _,
+    ) async {
+      if (!isConnected || useMockData) return;
       try {
         final rpm = await service.getRPM();
         final speed = await service.getSpeed();
-        final temp = await service.getCoolantTemp();
-        final load = await service.getEngineLoad();
-        final pressure = await service.getIntakeManifoldPressure();
-        final fuel = await service.getFuelLevel();
-
         liveParams = [
           liveParams[0].copyWith(
             value: '${rpm ?? 0}',
@@ -423,45 +427,86 @@ class Obd2Provider extends ChangeNotifier {
             value: '${speed ?? 0}',
             percentage: ((speed ?? 0) / 240 * 100).clamp(0, 100),
           ),
-          liveParams[2].copyWith(
-            value: '${temp ?? 0}',
-            percentage: ((temp ?? 0) / 125 * 100).clamp(0, 100),
-          ),
-          liveParams[3].copyWith(
-            value: '${load ?? 0}',
-            percentage: (load ?? 0).toDouble().clamp(0, 100),
-          ),
-          liveParams[4].copyWith(
-            value: '${pressure ?? 0}',
-            percentage: ((pressure ?? 0) / 100 * 100).clamp(0, 100),
-          ),
-          liveParams[5].copyWith(
-            value: '${fuel ?? 0}',
-            percentage: (fuel ?? 0).toDouble().clamp(0, 100),
-          ),
+          liveParams[2],
+          liveParams[3],
+          liveParams[4],
+          liveParams[5],
         ];
         notifyListeners();
       } catch (e) {
-        // Connection may have been lost during polling
-        debugPrint('Polling error: $e');
-        if (!isConnected) return;
+        debugPrint('Fast polling error: $e');
       }
     });
+
+    // Slow tier: Temp, Load, Pressure, Fuel every 5s
+    _pollSlowParams(service); // immediate first read
+    _slowPollingTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _pollSlowParams(service),
+    );
+  }
+
+  Future<void> _pollSlowParams(Obd2BaseService service) async {
+    if (!isConnected || useMockData) return;
+    try {
+      final temp = await service.getCoolantTemp();
+      final load = await service.getEngineLoad();
+      final pressure = await service.getIntakeManifoldPressure();
+      final fuel = await service.getFuelLevel();
+      liveParams = [
+        liveParams[0],
+        liveParams[1],
+        liveParams[2].copyWith(
+          value: '${temp ?? 0}',
+          percentage: ((temp ?? 0) / 125 * 100).clamp(0, 100),
+        ),
+        liveParams[3].copyWith(
+          value: '${load ?? 0}',
+          percentage: (load ?? 0).toDouble().clamp(0, 100),
+        ),
+        liveParams[4].copyWith(
+          value: '${pressure ?? 0}',
+          percentage: ((pressure ?? 0) / 100 * 100).clamp(0, 100),
+        ),
+        liveParams[5].copyWith(
+          value: '${fuel ?? 0}',
+          percentage: (fuel ?? 0).toDouble().clamp(0, 100),
+        ),
+      ];
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Slow polling error: $e');
+    }
   }
 
   void _startMockPolling() {
+    _cancelPolling();
     final rng = Random();
-    _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+
+    // Fast tier mock: RPM every 200ms
+    _fastPollingTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
       if (!isConnected) return;
       final rpm = 800 + rng.nextInt(200);
-      final temp = 88 + rng.nextInt(8);
-      final load = 15 + rng.nextInt(10);
-      final pressure = 25 + rng.nextInt(10);
-
       liveParams = [
         liveParams[0].copyWith(value: '$rpm', percentage: (rpm / 6000 * 100)),
         liveParams[1].copyWith(value: '0', percentage: 0),
+        liveParams[2],
+        liveParams[3],
+        liveParams[4],
+        liveParams[5],
+      ];
+      notifyListeners();
+    });
+
+    // Slow tier mock: Temp, Load, Pressure every 5s
+    _slowPollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!isConnected) return;
+      final temp = 88 + rng.nextInt(8);
+      final load = 15 + rng.nextInt(10);
+      final pressure = 25 + rng.nextInt(10);
+      liveParams = [
+        liveParams[0],
+        liveParams[1],
         liveParams[2].copyWith(value: '$temp', percentage: (temp / 125 * 100)),
         liveParams[3].copyWith(value: '$load', percentage: load.toDouble()),
         liveParams[4].copyWith(
@@ -610,7 +655,7 @@ class Obd2Provider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _pollingTimer?.cancel();
+    _cancelPolling();
     _btService.dispose();
     _wifiService.dispose();
     super.dispose();

@@ -31,6 +31,10 @@ class LiveParametersCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    // Filter out RPM and Speed — they're shown in the RadialGaugeCard
+    final filtered = parameters
+        .where((p) => p.label != 'rpm' && p.label != 'speed')
+        .toList();
     return GlassCard(
       child: Column(
         children: [
@@ -86,9 +90,9 @@ class LiveParametersCard extends StatelessWidget {
               mainAxisSpacing: 10,
               childAspectRatio: 1.35,
             ),
-            itemCount: parameters.length,
+            itemCount: filtered.length,
             itemBuilder: (context, index) {
-              final p = parameters[index];
+              final p = filtered[index];
               final label = _localizedLabel(p.label, l);
               return Semantics(
                 label: '$label: ${p.value} ${p.unit}',

@@ -20,6 +20,7 @@ inclusion: always
 | `google_fonts` | ^6.2.1 | Inter font family (runtime fetching disabled) |
 | `http` | ^1.2.2 | HTTP client for Gemini REST API |
 | `flutter_secure_storage` | ^9.2.4 | Encrypted key-value storage for API keys |
+| `syncfusion_flutter_gauges` | ^32.2.4 | Radial gauges for RPM tachometer and speedometer |
 | `cupertino_icons` | ^1.0.8 | iOS-style icons |
 | `flutter_localizations` | SDK | Localization support |
 

@@ -102,6 +102,8 @@ class AppLocalizations {
   String get liveParameters =>
       _t('Parámetros en Tiempo Real', 'Real-Time Parameters');
   String get live => _t('Live', 'Live');
+  String get gaugesTitle =>
+      _t('Tacómetro y Velocímetro', 'Tachometer & Speedometer');
 
   // ── Parameter Labels ──
   String get paramRpm => _t('RPM', 'RPM');

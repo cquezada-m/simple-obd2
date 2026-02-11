@@ -11,6 +11,7 @@ import '../widgets/connection_card.dart';
 import '../widgets/vehicle_info_card.dart';
 import '../widgets/diagnostic_codes_card.dart';
 import '../widgets/live_parameters_card.dart';
+import '../widgets/radial_gauge_card.dart';
 import '../widgets/recommendations_card.dart';
 import '../widgets/device_picker_sheet.dart';
 
@@ -413,6 +414,10 @@ class _HomeScreenState extends State<HomeScreen>
                 physics: const NeverScrollableScrollPhysics(),
                 child: Column(
                   children: [
+                    RadialGaugeCard(
+                      rpm: provider.liveParams[0],
+                      speed: provider.liveParams[1],
+                    ),
                     LiveParametersCard(parameters: provider.liveParams),
                     AiRecommendationsCard(
                       recommendations: provider.getRecommendations(
@@ -436,7 +441,7 @@ class _HomeScreenState extends State<HomeScreen>
         : (provider.dtcCodes.length * 100.0 + 120);
     final recHeight =
         provider.getRecommendations(locale: locale).length * 280.0 + 160;
-    final liveHeight = 420.0;
+    final liveHeight = 640.0; // gauges (~220) + remaining params + padding
     final diagTab = dtcHeight + recHeight;
     final liveTab = liveHeight + recHeight;
     return (diagTab > liveTab ? diagTab : liveTab) + 40;
