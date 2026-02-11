@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../l10n/app_localizations.dart';
 import '../models/dtc_code.dart';
 import '../theme/app_theme.dart';
 
@@ -17,6 +18,7 @@ class DiagnosticCodesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return GlassCard(
       child: Column(
         children: [
@@ -24,7 +26,7 @@ class DiagnosticCodesCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Códigos de Diagnóstico',
+                l.diagnosticCodes,
                 style: GoogleFonts.inter(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
@@ -37,28 +39,27 @@ class DiagnosticCodesCard extends StatelessWidget {
                   style: TextButton.styleFrom(
                     foregroundColor: AppTheme.error,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+                      horizontal: 12, vertical: 6,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
                   child: Text(
-                    isClearing ? 'Borrando...' : 'Borrar códigos',
+                    isClearing ? l.clearing : l.clearCodes,
                     style: GoogleFonts.inter(fontSize: 12),
                   ),
                 ),
             ],
           ),
           const SizedBox(height: 14),
-          if (codes.isEmpty) _buildEmptyState() else _buildCodesList(),
+          if (codes.isEmpty) _buildEmptyState(l) else _buildCodesList(l),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(AppLocalizations l) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 28),
       child: Column(
@@ -77,7 +78,7 @@ class DiagnosticCodesCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Sin códigos de error',
+            l.noErrorCodes,
             style: GoogleFonts.inter(
               fontWeight: FontWeight.w500,
               color: AppTheme.textPrimary,
@@ -85,7 +86,7 @@ class DiagnosticCodesCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'El sistema está funcionando correctamente',
+            l.systemOk,
             style: GoogleFonts.inter(
               fontSize: 13,
               color: AppTheme.textSecondary,
@@ -96,10 +97,10 @@ class DiagnosticCodesCard extends StatelessWidget {
     );
   }
 
-  Widget _buildCodesList() {
+  Widget _buildCodesList(AppLocalizations l) {
     return Column(
       children: codes.map((code) {
-        final (color, icon, label) = _severityStyle(code.severity);
+        final (color, icon, label) = _severityStyle(code.severity, l);
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(14),
@@ -137,8 +138,7 @@ class DiagnosticCodesCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
+                            horizontal: 8, vertical: 2,
                           ),
                           decoration: BoxDecoration(
                             color: color.withValues(alpha: 0.08),
@@ -174,14 +174,14 @@ class DiagnosticCodesCard extends StatelessWidget {
     );
   }
 
-  (Color, IconData, String) _severityStyle(DtcSeverity severity) {
+  (Color, IconData, String) _severityStyle(DtcSeverity severity, AppLocalizations l) {
     switch (severity) {
       case DtcSeverity.critical:
-        return (AppTheme.error, Icons.error_rounded, 'Crítico');
+        return (AppTheme.error, Icons.error_rounded, l.severityCritical);
       case DtcSeverity.warning:
-        return (AppTheme.warning, Icons.warning_amber_rounded, 'Advertencia');
+        return (AppTheme.warning, Icons.warning_amber_rounded, l.severityWarning);
       case DtcSeverity.info:
-        return (AppTheme.primary, Icons.info_outline_rounded, 'Info');
+        return (AppTheme.primary, Icons.info_outline_rounded, l.severityInfo);
     }
   }
 }

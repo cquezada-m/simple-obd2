@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../l10n/app_localizations.dart';
 import '../models/recommendation.dart';
 import '../theme/app_theme.dart';
 
@@ -9,21 +10,22 @@ class AiRecommendationsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(),
+          _buildHeader(l),
           const SizedBox(height: 16),
-          ...recommendations.map(_buildRec),
+          ...recommendations.map((r) => _buildRec(r, l)),
           const SizedBox(height: 8),
-          _buildDisclaimer(),
+          _buildDisclaimer(l),
         ],
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AppLocalizations l) {
     return Row(
       children: [
         Container(
@@ -49,7 +51,7 @@ class AiRecommendationsCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Análisis AI',
+                l.aiAnalysis,
                 style: GoogleFonts.inter(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
@@ -57,7 +59,7 @@ class AiRecommendationsCard extends StatelessWidget {
                 ),
               ),
               Text(
-                'Recomendaciones basadas en diagnóstico',
+                l.aiRecommendations,
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   color: AppTheme.textSecondary,
@@ -70,7 +72,7 @@ class AiRecommendationsCard extends StatelessWidget {
     );
   }
 
-  Widget _buildRec(Recommendation rec) {
+  Widget _buildRec(Recommendation rec, AppLocalizations l) {
     final bColor = _pColor(rec.priority);
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -108,7 +110,7 @@ class AiRecommendationsCard extends StatelessWidget {
                     Icon(_pIcon(rec.priority), size: 11, color: bColor),
                     const SizedBox(width: 4),
                     Text(
-                      _pLabel(rec.priority),
+                      _pLabel(rec.priority, l),
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         color: bColor,
@@ -137,8 +139,7 @@ class AiRecommendationsCard extends StatelessWidget {
                 .map(
                   (c) => Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: 8, vertical: 4,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.7),
@@ -169,7 +170,7 @@ class AiRecommendationsCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Costo estimado',
+                  l.estimatedCost,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: AppTheme.textTertiary,
@@ -190,21 +191,20 @@ class AiRecommendationsCard extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildDisclaimer() {
+  Widget _buildDisclaimer(AppLocalizations l) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.purple.withValues(alpha: 0.05),
+        color: AppTheme.purple.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            Icons.auto_awesome_rounded,
+            Icons.info_outline_rounded,
             size: 14,
-            color: AppTheme.purple.withValues(alpha: 0.6),
+            color: AppTheme.textTertiary.withValues(alpha: 0.6),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -212,19 +212,21 @@ class AiRecommendationsCard extends StatelessWidget {
               TextSpan(
                 children: [
                   TextSpan(
-                    text: 'Análisis generado por IA. ',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                    text: l.aiDisclaimer,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textTertiary,
+                    ),
                   ),
                   TextSpan(
-                    text:
-                        'Consulta con un mecánico certificado antes de realizar reparaciones.',
-                    style: GoogleFonts.inter(),
+                    text: l.aiDisclaimerDetail,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: AppTheme.textTertiary,
+                    ),
                   ),
                 ],
-              ),
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                color: AppTheme.textSecondary,
               ),
             ),
           ),
@@ -233,21 +235,27 @@ class AiRecommendationsCard extends StatelessWidget {
     );
   }
 
-  Color _pColor(RecommendationPriority p) => switch (p) {
-    RecommendationPriority.high => AppTheme.error,
-    RecommendationPriority.medium => AppTheme.warning,
-    RecommendationPriority.low => AppTheme.success,
-  };
+  Color _pColor(RecommendationPriority p) {
+    return switch (p) {
+      RecommendationPriority.high => AppTheme.error,
+      RecommendationPriority.medium => AppTheme.yellow,
+      RecommendationPriority.low => AppTheme.success,
+    };
+  }
 
-  String _pLabel(RecommendationPriority p) => switch (p) {
-    RecommendationPriority.high => 'Alta',
-    RecommendationPriority.medium => 'Media',
-    RecommendationPriority.low => 'Baja',
-  };
+  String _pLabel(RecommendationPriority p, AppLocalizations l) {
+    return switch (p) {
+      RecommendationPriority.high => l.priorityHigh,
+      RecommendationPriority.medium => l.priorityMedium,
+      RecommendationPriority.low => l.priorityLow,
+    };
+  }
 
-  IconData _pIcon(RecommendationPriority p) => switch (p) {
-    RecommendationPriority.high => Icons.error_outline_rounded,
-    RecommendationPriority.medium => Icons.lightbulb_outline_rounded,
-    RecommendationPriority.low => Icons.check_circle_outline_rounded,
-  };
+  IconData _pIcon(RecommendationPriority p) {
+    return switch (p) {
+      RecommendationPriority.high => Icons.warning_rounded,
+      RecommendationPriority.medium => Icons.info_rounded,
+      RecommendationPriority.low => Icons.check_circle_rounded,
+    };
+  }
 }

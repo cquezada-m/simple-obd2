@@ -227,8 +227,8 @@ class Obd2Service implements Obd2BaseService {
         codes.add(
           DtcCode(
             code: code,
-            description: _getDTCDescription(code),
-            severity: _getDTCSeverity(code),
+            description: Obd2BaseService.getDTCDescription(code),
+            severity: Obd2BaseService.getDTCSeverity(code),
           ),
         );
       }
@@ -265,36 +265,6 @@ class Obd2Service implements Obd2BaseService {
       'U3',
     ];
     return '${prefix[firstChar]}${hex.substring(1)}';
-  }
-
-  DtcSeverity _getDTCSeverity(String code) {
-    if (code.startsWith('P0') && (code.contains('3') || code.contains('1'))) {
-      return DtcSeverity.critical;
-    }
-    if (code.startsWith('P04') || code.startsWith('P01')) {
-      return DtcSeverity.warning;
-    }
-    return DtcSeverity.info;
-  }
-
-  String _getDTCDescription(String code) {
-    const descriptions = {
-      'P0301': 'Fallo de encendido en cilindro 1',
-      'P0302': 'Fallo de encendido en cilindro 2',
-      'P0303': 'Fallo de encendido en cilindro 3',
-      'P0304': 'Fallo de encendido en cilindro 4',
-      'P0420': 'Catalizador sistema bajo eficiencia (Banco 1)',
-      'P0171': 'Sistema demasiado pobre (Banco 1)',
-      'P0172': 'Sistema demasiado rico (Banco 1)',
-      'P0300': 'Fallos de encendido aleatorios detectados',
-      'P0401': 'Flujo insuficiente de recirculación de gases',
-      'P0440': 'Sistema de control de emisiones evaporativas',
-      'P0442': 'Fuga pequeña en sistema EVAP',
-      'P0455': 'Fuga grande en sistema EVAP',
-      'P0500': 'Sensor de velocidad del vehículo',
-      'P0505': 'Mal funcionamiento del control de ralentí',
-    };
-    return descriptions[code] ?? 'Código de diagnóstico: $code';
   }
 
   @override

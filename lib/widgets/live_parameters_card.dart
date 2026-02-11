@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../l10n/app_localizations.dart';
 import '../models/vehicle_parameter.dart';
 import '../theme/app_theme.dart';
 
@@ -15,8 +16,21 @@ class LiveParametersCard extends StatelessWidget {
     return AppTheme.success;
   }
 
+  String _localizedLabel(String key, AppLocalizations l) {
+    return switch (key) {
+      'rpm' => l.paramRpm,
+      'speed' => l.paramSpeed,
+      'engine_temp' => l.paramEngineTemp,
+      'engine_load' => l.paramEngineLoad,
+      'intake_pressure' => l.paramIntakePressure,
+      'fuel_level' => l.paramFuelLevel,
+      _ => key,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return GlassCard(
       child: Column(
         children: [
@@ -24,7 +38,7 @@ class LiveParametersCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Parámetros en Tiempo Real',
+                l.liveParameters,
                 style: GoogleFonts.inter(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
@@ -50,7 +64,7 @@ class LiveParametersCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      'Live',
+                      l.live,
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
@@ -93,7 +107,7 @@ class LiveParametersCard extends StatelessWidget {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            p.label,
+                            _localizedLabel(p.label, l),
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,

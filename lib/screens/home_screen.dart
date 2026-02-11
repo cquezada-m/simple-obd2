@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
+import '../providers/language_provider.dart';
 import '../providers/obd2_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/connection_card.dart';
@@ -46,12 +48,12 @@ class _HomeScreenState extends State<HomeScreen>
             color: Colors.white.withValues(alpha: 0.85),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           ),
-          child: const Column(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(strokeWidth: 2.5),
-              SizedBox(height: 16),
-              Text('Buscando dispositivos...'),
+              const CircularProgressIndicator(strokeWidth: 2.5),
+              const SizedBox(height: 16),
+              Text(AppLocalizations.of(context).searchingDevices),
             ],
           ),
         ),
@@ -133,6 +135,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildAppBar() {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
       child: Row(
@@ -150,32 +153,65 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
           const SizedBox(width: 14),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'OBD2 Scanner',
-                style: GoogleFonts.inter(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l.appTitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
-              ),
-              Text(
-                'Diagnóstico de Vehículo',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: AppTheme.textSecondary,
+                Text(
+                  l.appSubtitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          _buildLanguageToggle(),
         ],
       ),
     );
   }
 
+  Widget _buildLanguageToggle() {
+    final langProvider = context.watch<LanguageProvider>();
+    return GestureDetector(
+      onTap: () => langProvider.toggleLanguage(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppTheme.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.language_rounded, size: 16, color: AppTheme.primary),
+            const SizedBox(width: 4),
+            Text(
+              langProvider.locale.toUpperCase(),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTabs(Obd2Provider provider) {
+    final l = AppLocalizations.of(context);
     return Column(
       children: [
         Container(
@@ -214,7 +250,7 @@ class _HomeScreenState extends State<HomeScreen>
                   children: [
                     const Icon(Icons.warning_amber_rounded, size: 16),
                     const SizedBox(width: 6),
-                    const Text('Diagnóstico'),
+                    Text(l.diagnosticTab),
                     if (provider.dtcCodes.isNotEmpty) ...[
                       const SizedBox(width: 6),
                       Container(
@@ -239,13 +275,13 @@ class _HomeScreenState extends State<HomeScreen>
                   ],
                 ),
               ),
-              const Tab(
+              Tab(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.show_chart_rounded, size: 16),
-                    SizedBox(width: 6),
-                    Text('En Vivo'),
+                    const Icon(Icons.show_chart_rounded, size: 16),
+                    const SizedBox(width: 6),
+                    Text(l.liveTab),
                   ],
                 ),
               ),
@@ -267,7 +303,7 @@ class _HomeScreenState extends State<HomeScreen>
                       isClearing: provider.isClearing,
                     ),
                     AiRecommendationsCard(
-                      recommendations: provider.getRecommendations(),
+                      recommendations: provider.getRecommendations(locale: l.locale),
                     ),
                   ],
                 ),
@@ -278,7 +314,7 @@ class _HomeScreenState extends State<HomeScreen>
                   children: [
                     LiveParametersCard(parameters: provider.liveParams),
                     AiRecommendationsCard(
-                      recommendations: provider.getRecommendations(),
+                      recommendations: provider.getRecommendations(locale: l.locale),
                     ),
                   ],
                 ),
@@ -291,10 +327,11 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   double _calculateTabHeight(Obd2Provider provider) {
+    final locale = AppLocalizations.of(context).locale;
     final dtcHeight = provider.dtcCodes.isEmpty
         ? 250.0
         : (provider.dtcCodes.length * 100.0 + 120);
-    final recHeight = provider.getRecommendations().length * 280.0 + 160;
+    final recHeight = provider.getRecommendations(locale: locale).length * 280.0 + 160;
     final liveHeight = 420.0;
     final diagTab = dtcHeight + recHeight;
     final liveTab = liveHeight + recHeight;
@@ -302,6 +339,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildDisconnectedState() {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 60),
       child: Column(
@@ -321,7 +359,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           const SizedBox(height: 20),
           Text(
-            'Conecta tu dispositivo OBD2',
+            l.connectObd2,
             style: GoogleFonts.inter(
               fontWeight: FontWeight.w500,
               fontSize: 16,
@@ -332,7 +370,7 @@ class _HomeScreenState extends State<HomeScreen>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 48),
             child: Text(
-              'Conecta el escáner al puerto de diagnóstico de tu vehículo y presiona conectar',
+              l.connectObd2Hint,
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 fontSize: 14,

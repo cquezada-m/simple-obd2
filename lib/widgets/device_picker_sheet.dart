@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../l10n/app_localizations.dart';
 import '../services/wifi_obd2_service.dart';
 import '../theme/app_theme.dart';
 
@@ -49,6 +50,7 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       child: BackdropFilter(
@@ -76,7 +78,7 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Conectar Dispositivo',
+                  l.connectDevice,
                   style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -85,9 +87,7 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  widget.isIOS
-                      ? 'Conecta vía WiFi al adaptador OBD2'
-                      : 'Selecciona el método de conexión',
+                  widget.isIOS ? l.connectViaWifi : l.selectConnectionMethod,
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     color: AppTheme.textSecondary,
@@ -99,9 +99,9 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
                   const SizedBox(height: 16),
                 ],
                 if (_showWifi)
-                  _buildWifiSection()
+                  _buildWifiSection(l)
                 else
-                  _buildBluetoothSection(),
+                  _buildBluetoothSection(l),
                 const SizedBox(height: 16),
                 Divider(color: AppTheme.textTertiary.withValues(alpha: 0.15)),
                 const SizedBox(height: 8),
@@ -114,7 +114,7 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
                     },
                     icon: const Icon(Icons.science_outlined, size: 18),
                     label: Text(
-                      'Usar datos de demostración',
+                      l.useDemoData,
                       style: GoogleFonts.inter(fontSize: 13),
                     ),
                     style: TextButton.styleFrom(
@@ -212,7 +212,7 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
     );
   }
 
-  Widget _buildWifiSection() {
+  Widget _buildWifiSection(AppLocalizations l) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -234,7 +234,7 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Cómo conectar vía WiFi',
+                    l.howToConnectWifi,
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -244,25 +244,19 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
                 ],
               ),
               const SizedBox(height: 10),
-              _WifiStep(
-                number: '1',
-                text: 'Conecta el adaptador OBD2 al puerto del vehículo',
-              ),
+              _WifiStep(number: '1', text: l.wifiStep1),
               const SizedBox(height: 6),
-              _WifiStep(
-                number: '2',
-                text: 'Ve a Ajustes > WiFi en tu dispositivo',
-              ),
+              _WifiStep(number: '2', text: l.wifiStep2),
               const SizedBox(height: 6),
-              _WifiStep(number: '3', text: 'Conéctate a la red del adaptador'),
+              _WifiStep(number: '3', text: l.wifiStep3),
               const SizedBox(height: 6),
-              _WifiStep(number: '4', text: 'Regresa aquí y presiona Conectar'),
+              _WifiStep(number: '4', text: l.wifiStep4),
             ],
           ),
         ),
         const SizedBox(height: 16),
         Text(
-          'Dirección IP',
+          l.ipAddress,
           style: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w500,
@@ -292,7 +286,7 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
         ),
         const SizedBox(height: 12),
         Text(
-          'Puerto',
+          l.port,
           style: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w500,
@@ -334,7 +328,7 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
             },
             icon: const Icon(Icons.wifi_rounded, size: 18),
             label: Text(
-              'Conectar vía WiFi',
+              l.connectViaWifiBtn,
               style: GoogleFonts.inter(fontSize: 14),
             ),
           ),
@@ -343,13 +337,13 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
     );
   }
 
-  Widget _buildBluetoothSection() {
+  Widget _buildBluetoothSection(AppLocalizations l) {
     if (widget.devices.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
         child: Center(
           child: Text(
-            'No se encontraron dispositivos emparejados',
+            l.noDevicesFound,
             style: GoogleFonts.inter(color: AppTheme.textSecondary),
           ),
         ),
@@ -375,7 +369,7 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
                   ),
                 ),
                 title: Text(
-                  device.name ?? 'Dispositivo desconocido',
+                  device.name ?? l.unknownDevice,
                   style: GoogleFonts.inter(fontWeight: FontWeight.w500),
                 ),
                 subtitle: Text(

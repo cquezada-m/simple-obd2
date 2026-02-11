@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 class ConnectionCard extends StatelessWidget {
@@ -18,6 +19,7 @@ class ConnectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return GlassCard(
       child: Column(
         children: [
@@ -31,10 +33,10 @@ class ConnectionCard extends StatelessWidget {
                   children: [
                     Text(
                       isConnected
-                          ? 'Conectado'
+                          ? l.connected
                           : isConnecting
-                          ? 'Conectando...'
-                          : 'Desconectado',
+                          ? l.connecting
+                          : l.disconnected,
                       style: GoogleFonts.inter(
                         fontWeight: FontWeight.w500,
                         fontSize: 15,
@@ -53,7 +55,7 @@ class ConnectionCard extends StatelessWidget {
                           const SizedBox(width: 4),
                         ],
                         Text(
-                          isConnected ? 'OBD2 ELM327' : 'Dispositivo OBD2',
+                          isConnected ? 'OBD2 ELM327' : l.obd2Device,
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: AppTheme.textSecondary,
@@ -68,7 +70,7 @@ class ConnectionCard extends StatelessWidget {
                 OutlinedButton(
                   onPressed: onDisconnect,
                   child: Text(
-                    'Desconectar',
+                    l.disconnect,
                     style: GoogleFonts.inter(fontSize: 13),
                   ),
                 )
@@ -76,7 +78,7 @@ class ConnectionCard extends StatelessWidget {
                 ElevatedButton(
                   onPressed: isConnecting ? null : onConnect,
                   child: Text(
-                    isConnecting ? 'Conectando...' : 'Conectar',
+                    isConnecting ? l.connecting : l.connect,
                     style: GoogleFonts.inter(fontSize: 14),
                   ),
                 ),
@@ -101,7 +103,7 @@ class ConnectionCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Asegúrate de que tu dispositivo OBD2 esté conectado al vehículo y encendido.',
+                      l.connectionHint,
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: AppTheme.textSecondary,

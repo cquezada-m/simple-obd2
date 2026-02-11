@@ -1,3 +1,4 @@
+import '../data/dtc_database.dart';
 import '../models/dtc_code.dart';
 
 /// Interfaz común para servicios OBD2 (Bluetooth y WiFi)
@@ -85,23 +86,8 @@ abstract class Obd2BaseService {
     return DtcSeverity.info;
   }
 
-  static String getDTCDescription(String code) {
-    const descriptions = {
-      'P0301': 'Fallo de encendido en cilindro 1',
-      'P0302': 'Fallo de encendido en cilindro 2',
-      'P0303': 'Fallo de encendido en cilindro 3',
-      'P0304': 'Fallo de encendido en cilindro 4',
-      'P0420': 'Catalizador sistema bajo eficiencia (Banco 1)',
-      'P0171': 'Sistema demasiado pobre (Banco 1)',
-      'P0172': 'Sistema demasiado rico (Banco 1)',
-      'P0300': 'Fallos de encendido aleatorios detectados',
-      'P0401': 'Flujo insuficiente de recirculación de gases',
-      'P0440': 'Sistema de control de emisiones evaporativas',
-      'P0442': 'Fuga pequeña en sistema EVAP',
-      'P0455': 'Fuga grande en sistema EVAP',
-      'P0500': 'Sensor de velocidad del vehículo',
-      'P0505': 'Mal funcionamiento del control de ralentí',
-    };
-    return descriptions[code] ?? 'Código de diagnóstico: $code';
+  static String getDTCDescription(String code, {String locale = 'es'}) {
+    return DtcDatabase.getDescription(code, locale) ??
+        (locale == 'es' ? 'Código de diagnóstico: $code' : 'Diagnostic code: $code');
   }
 }

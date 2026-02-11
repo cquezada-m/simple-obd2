@@ -3,9 +3,12 @@ import 'dart:io' show Platform;
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import '../data/dtc_database.dart';
 import '../models/dtc_code.dart';
 import '../models/vehicle_parameter.dart';
 import '../models/recommendation.dart';
+import '../models/ai_diagnostic.dart';
+import '../services/gemini_service.dart';
 import '../services/obd2_base_service.dart';
 import '../services/obd2_service.dart';
 import '../services/wifi_obd2_service.dart';
@@ -32,6 +35,54 @@ class Obd2Provider extends ChangeNotifier {
   bool useMockData = false;
   String? connectionError;
 
+  // ── Gemini AI ────────────────────────────────────────────
+  GeminiService? _geminiService;
+  AiDiagnostic? aiDiagnostic;
+  bool isLoadingAiDiagnostic = false;
+  String? aiDiagnosticError;
+
+  /// Configura el servicio de Gemini con el API key.
+  void configureGemini(String apiKey, {String model = 'gemini-2.0-flash'}) {
+    _geminiService = GeminiService(apiKey: apiKey, model: model);
+  }
+
+  bool get isGeminiConfigured => _geminiService != null;
+
+  /// Solicita un diagnóstico AI basado en el estado actual del vehículo.
+  Future<void> requestAiDiagnostic() async {
+    if (_geminiService == null) {
+      aiDiagnosticError = 'Gemini no está configurado. Proporciona un API key.';
+      notifyListeners();
+      return;
+    }
+    if (!isConnected) {
+      aiDiagnosticError = 'Conecta el vehículo primero.';
+      notifyListeners();
+      return;
+    }
+
+    isLoadingAiDiagnostic = true;
+    aiDiagnosticError = null;
+    notifyListeners();
+
+    try {
+      aiDiagnostic = await _geminiService!.getDiagnostic(
+        parameters: liveParams,
+        dtcCodes: dtcCodes,
+        vin: vin,
+        protocol: protocol,
+        ecuCount: ecuCount,
+      );
+    } on GeminiException catch (e) {
+      aiDiagnosticError = e.message;
+    } catch (e) {
+      aiDiagnosticError = 'Error al obtener diagnóstico AI: $e';
+    } finally {
+      isLoadingAiDiagnostic = false;
+      notifyListeners();
+    }
+  }
+
   // Configuración WiFi editable
   String wifiHost = WifiObd2Service.defaultHost;
   int wifiPort = WifiObd2Service.defaultPort;
@@ -54,7 +105,7 @@ class Obd2Provider extends ChangeNotifier {
   void _initDefaultParams() {
     liveParams = [
       VehicleParameter(
-        label: 'RPM',
+        label: 'rpm',
         value: '0',
         unit: 'rpm',
         icon: Icons.speed,
@@ -63,7 +114,7 @@ class Obd2Provider extends ChangeNotifier {
         bgColor: AppTheme.purpleLight,
       ),
       VehicleParameter(
-        label: 'Velocidad',
+        label: 'speed',
         value: '0',
         unit: 'km/h',
         icon: Icons.trending_up,
@@ -72,7 +123,7 @@ class Obd2Provider extends ChangeNotifier {
         bgColor: AppTheme.primaryLight,
       ),
       VehicleParameter(
-        label: 'Temp. Motor',
+        label: 'engine_temp',
         value: '0',
         unit: '°C',
         icon: Icons.thermostat,
@@ -81,7 +132,7 @@ class Obd2Provider extends ChangeNotifier {
         bgColor: AppTheme.errorLight,
       ),
       VehicleParameter(
-        label: 'Carga Motor',
+        label: 'engine_load',
         value: '0',
         unit: '%',
         icon: Icons.bolt,
@@ -90,7 +141,7 @@ class Obd2Provider extends ChangeNotifier {
         bgColor: AppTheme.yellowLight,
       ),
       VehicleParameter(
-        label: 'Presion Admision',
+        label: 'intake_pressure',
         value: '0',
         unit: 'kPa',
         icon: Icons.air,
@@ -99,7 +150,7 @@ class Obd2Provider extends ChangeNotifier {
         bgColor: AppTheme.cyanLight,
       ),
       VehicleParameter(
-        label: 'Nivel Combustible',
+        label: 'fuel_level',
         value: '0',
         unit: '%',
         icon: Icons.local_gas_station,
@@ -194,26 +245,26 @@ class Obd2Provider extends ChangeNotifier {
     vin = '1HGBH41JXMN109186';
     protocol = 'ISO 15765-4 (CAN 11/500)';
     ecuCount = 7;
-    dtcCodes = const [
+    dtcCodes = [
       DtcCode(
         code: 'P0301',
-        description: 'Fallo de encendido en cilindro 1',
+        description: DtcDatabase.getDescriptionEs('P0301') ?? 'P0301',
         severity: DtcSeverity.critical,
       ),
       DtcCode(
         code: 'P0420',
-        description: 'Catalizador sistema bajo eficiencia',
+        description: DtcDatabase.getDescriptionEs('P0420') ?? 'P0420',
         severity: DtcSeverity.warning,
       ),
       DtcCode(
         code: 'P0171',
-        description: 'Sistema demasiado pobre (Banco 1)',
+        description: DtcDatabase.getDescriptionEs('P0171') ?? 'P0171',
         severity: DtcSeverity.warning,
       ),
     ];
     liveParams = [
       VehicleParameter(
-        label: 'RPM',
+        label: 'rpm',
         value: '850',
         unit: 'rpm',
         icon: Icons.speed,
@@ -222,7 +273,7 @@ class Obd2Provider extends ChangeNotifier {
         bgColor: AppTheme.purpleLight,
       ),
       VehicleParameter(
-        label: 'Velocidad',
+        label: 'speed',
         value: '0',
         unit: 'km/h',
         icon: Icons.trending_up,
@@ -231,7 +282,7 @@ class Obd2Provider extends ChangeNotifier {
         bgColor: AppTheme.primaryLight,
       ),
       VehicleParameter(
-        label: 'Temp. Motor',
+        label: 'engine_temp',
         value: '92',
         unit: '°C',
         icon: Icons.thermostat,
@@ -240,7 +291,7 @@ class Obd2Provider extends ChangeNotifier {
         bgColor: AppTheme.errorLight,
       ),
       VehicleParameter(
-        label: 'Carga Motor',
+        label: 'engine_load',
         value: '18',
         unit: '%',
         icon: Icons.bolt,
@@ -249,7 +300,7 @@ class Obd2Provider extends ChangeNotifier {
         bgColor: AppTheme.yellowLight,
       ),
       VehicleParameter(
-        label: 'Presion Admision',
+        label: 'intake_pressure',
         value: '29',
         unit: 'kPa',
         icon: Icons.air,
@@ -258,7 +309,7 @@ class Obd2Provider extends ChangeNotifier {
         bgColor: AppTheme.cyanLight,
       ),
       VehicleParameter(
-        label: 'Nivel Combustible',
+        label: 'fuel_level',
         value: '68',
         unit: '%',
         icon: Icons.local_gas_station,
@@ -286,6 +337,8 @@ class Obd2Provider extends ChangeNotifier {
     vin = '';
     protocol = '';
     ecuCount = 0;
+    aiDiagnostic = null;
+    aiDiagnosticError = null;
     _initDefaultParams();
     notifyListeners();
   }
@@ -381,75 +434,69 @@ class Obd2Provider extends ChangeNotifier {
 
   // ── Recomendaciones AI ─────────────────────────────────────
 
-  List<Recommendation> getRecommendations() {
+  List<Recommendation> getRecommendations({String locale = 'es'}) {
     final recs = <Recommendation>[];
+    final isEs = locale == 'es';
 
     for (final code in dtcCodes) {
       switch (code.code) {
         case 'P0301':
           recs.add(
-            const Recommendation(
-              title: 'Revisar Sistema de Encendido - Cilindro 1',
-              description:
-                  'El fallo de encendido puede deberse a bujias desgastadas, bobinas defectuosas o problemas en los inyectores.',
+            Recommendation(
+              title: isEs ? 'Revisar Sistema de Encendido - Cilindro 1' : 'Check Ignition System - Cylinder 1',
+              description: isEs
+                  ? 'El fallo de encendido puede deberse a bujias desgastadas, bobinas defectuosas o problemas en los inyectores.'
+                  : 'Misfire may be caused by worn spark plugs, faulty coils, or injector problems.',
               priority: RecommendationPriority.high,
-              components: [
-                'Bujias',
-                'Bobinas de encendido',
-                'Inyectores',
-                'Cables de alta tension',
-              ],
+              components: isEs
+                  ? const ['Bujias', 'Bobinas de encendido', 'Inyectores', 'Cables de alta tension']
+                  : const ['Spark plugs', 'Ignition coils', 'Injectors', 'High tension cables'],
               estimatedCost: '\$50 - \$300',
             ),
           );
         case 'P0420':
           recs.add(
-            const Recommendation(
-              title: 'Inspeccion del Catalizador',
-              description:
-                  'La eficiencia del catalizador esta por debajo del umbral. Puede requerir limpieza o reemplazo.',
+            Recommendation(
+              title: isEs ? 'Inspeccion del Catalizador' : 'Catalyst Inspection',
+              description: isEs
+                  ? 'La eficiencia del catalizador esta por debajo del umbral. Puede requerir limpieza o reemplazo.'
+                  : 'Catalyst efficiency is below threshold. May require cleaning or replacement.',
               priority: RecommendationPriority.medium,
-              components: [
-                'Catalizador',
-                'Sensores de oxigeno',
-                'Sistema de escape',
-              ],
+              components: isEs
+                  ? const ['Catalizador', 'Sensores de oxigeno', 'Sistema de escape']
+                  : const ['Catalyst', 'Oxygen sensors', 'Exhaust system'],
               estimatedCost: '\$200 - \$1,500',
             ),
           );
         case 'P0171':
           recs.add(
-            const Recommendation(
-              title: 'Verificar Sistema de Combustible',
-              description:
-                  'El sistema esta funcionando muy pobre. Revisar filtro de aire, sensores MAF y posibles fugas de vacio.',
+            Recommendation(
+              title: isEs ? 'Verificar Sistema de Combustible' : 'Check Fuel System',
+              description: isEs
+                  ? 'El sistema esta funcionando muy pobre. Revisar filtro de aire, sensores MAF y posibles fugas de vacio.'
+                  : 'System is running too lean. Check air filter, MAF sensors, and possible vacuum leaks.',
               priority: RecommendationPriority.medium,
-              components: [
-                'Filtro de aire',
-                'Sensor MAF',
-                'Sistema de vacio',
-                'Inyectores',
-              ],
+              components: isEs
+                  ? const ['Filtro de aire', 'Sensor MAF', 'Sistema de vacio', 'Inyectores']
+                  : const ['Air filter', 'MAF sensor', 'Vacuum system', 'Injectors'],
               estimatedCost: '\$100 - \$400',
             ),
           );
       }
     }
 
-    final temp = liveParams.firstWhere((p) => p.label == 'Temp. Motor');
+    final temp = liveParams.firstWhere((p) => p.label == 'engine_temp');
     if (int.tryParse(temp.value) != null && int.parse(temp.value) > 100) {
       recs.add(
-        const Recommendation(
-          title: 'Temperatura del Motor Elevada',
-          description:
-              'El motor esta operando a temperatura alta. Verificar nivel de refrigerante y funcionamiento del termostato.',
+        Recommendation(
+          title: isEs ? 'Temperatura del Motor Elevada' : 'High Engine Temperature',
+          description: isEs
+              ? 'El motor esta operando a temperatura alta. Verificar nivel de refrigerante y funcionamiento del termostato.'
+              : 'Engine is operating at high temperature. Check coolant level and thermostat operation.',
           priority: RecommendationPriority.high,
-          components: [
-            'Sistema de refrigeracion',
-            'Termostato',
-            'Bomba de agua',
-            'Radiador',
-          ],
+          components: isEs
+              ? const ['Sistema de refrigeracion', 'Termostato', 'Bomba de agua', 'Radiador']
+              : const ['Cooling system', 'Thermostat', 'Water pump', 'Radiator'],
           estimatedCost: '\$80 - \$500',
         ),
       );
@@ -457,12 +504,15 @@ class Obd2Provider extends ChangeNotifier {
 
     if (recs.isEmpty) {
       recs.add(
-        const Recommendation(
-          title: 'Vehiculo en Buen Estado',
-          description:
-              'No se detectaron problemas criticos. Se recomienda mantenimiento preventivo regular.',
+        Recommendation(
+          title: isEs ? 'Vehiculo en Buen Estado' : 'Vehicle in Good Condition',
+          description: isEs
+              ? 'No se detectaron problemas criticos. Se recomienda mantenimiento preventivo regular.'
+              : 'No critical problems detected. Regular preventive maintenance is recommended.',
           priority: RecommendationPriority.low,
-          components: ['Mantenimiento general'],
+          components: isEs
+              ? const ['Mantenimiento general']
+              : const ['General maintenance'],
           estimatedCost: '\$50 - \$150',
         ),
       );

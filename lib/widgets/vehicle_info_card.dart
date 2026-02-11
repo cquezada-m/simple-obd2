@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 class VehicleInfoCard extends StatelessWidget {
@@ -16,6 +17,7 @@ class VehicleInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return GlassCard(
       child: Column(
         children: [
@@ -39,7 +41,7 @@ class VehicleInfoCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Información del Vehículo',
+                      l.vehicleInfo,
                       style: GoogleFonts.inter(
                         fontWeight: FontWeight.w500,
                         fontSize: 15,
@@ -48,7 +50,7 @@ class VehicleInfoCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Datos del sistema OBD2',
+                      l.obd2SystemData,
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: AppTheme.textSecondary,
@@ -62,9 +64,9 @@ class VehicleInfoCard extends StatelessWidget {
           const SizedBox(height: 16),
           _infoRow(Icons.shield_outlined, 'VIN', vin, mono: true),
           const SizedBox(height: 8),
-          _infoRow(Icons.info_outline_rounded, 'Protocolo', protocol),
+          _infoRow(Icons.info_outline_rounded, l.protocol, protocol),
           const SizedBox(height: 8),
-          _infoRow(Icons.memory_rounded, 'ECUs Detectadas', '$ecuCount'),
+          _infoRow(Icons.memory_rounded, l.ecusDetected, '$ecuCount'),
         ],
       ),
     );
