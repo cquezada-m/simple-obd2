@@ -1,6 +1,7 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 import 'dart:math';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import '../data/dtc_database.dart';
@@ -9,6 +10,7 @@ import '../models/vehicle_parameter.dart';
 import '../models/recommendation.dart';
 import '../models/ai_diagnostic.dart';
 import '../services/gemini_service.dart';
+import '../services/secure_storage_service.dart';
 import '../services/obd2_base_service.dart';
 import '../services/obd2_service.dart';
 import '../services/wifi_obd2_service.dart';
@@ -41,9 +43,32 @@ class Obd2Provider extends ChangeNotifier {
   bool isLoadingAiDiagnostic = false;
   String? aiDiagnosticError;
 
-  /// Configura el servicio de Gemini con el API key.
-  void configureGemini(String apiKey, {String model = 'gemini-2.0-flash'}) {
+  /// Configura Gemini guardando el API key en almacenamiento seguro.
+  Future<void> configureGemini(
+    String apiKey, {
+    String model = 'gemini-2.0-flash',
+  }) async {
+    await SecureStorageService.saveGeminiApiKey(apiKey);
     _geminiService = GeminiService(apiKey: apiKey, model: model);
+    notifyListeners();
+  }
+
+  /// Carga el API key desde almacenamiento seguro (llamar al iniciar la app).
+  Future<void> loadGeminiApiKey({String model = 'gemini-2.0-flash'}) async {
+    final apiKey = await SecureStorageService.getGeminiApiKey();
+    if (apiKey != null && apiKey.isNotEmpty) {
+      _geminiService = GeminiService(apiKey: apiKey, model: model);
+      notifyListeners();
+    }
+  }
+
+  /// Elimina el API key de Gemini del almacenamiento seguro.
+  Future<void> removeGeminiApiKey() async {
+    await SecureStorageService.deleteGeminiApiKey();
+    _geminiService = null;
+    aiDiagnostic = null;
+    aiDiagnosticError = null;
+    notifyListeners();
   }
 
   bool get isGeminiConfigured => _geminiService != null;
@@ -89,7 +114,7 @@ class Obd2Provider extends ChangeNotifier {
 
   bool get isConnected => connectionState == ConnectionState.connected;
   bool get isConnecting => connectionState == ConnectionState.connecting;
-  bool get isIOS => Platform.isIOS;
+  bool get isIOS => defaultTargetPlatform == TargetPlatform.iOS;
 
   /// Servicio activo según el modo de conexión
   Obd2BaseService? get _activeService => switch (activeMode) {
@@ -167,11 +192,17 @@ class Obd2Provider extends ChangeNotifier {
     try {
       final enabled = await _btService.isBluetoothEnabled();
       if (!enabled) {
-        await _btService.enableBluetooth();
+        final didEnable = await _btService.enableBluetooth();
+        if (!didEnable) {
+          pairedDevices = [];
+          notifyListeners();
+          return;
+        }
       }
       pairedDevices = await _btService.getPairedDevices();
     } catch (e) {
       pairedDevices = [];
+      debugPrint('Error scanning devices: $e');
     }
     notifyListeners();
   }
@@ -223,10 +254,18 @@ class Obd2Provider extends ChangeNotifier {
     connectionState = ConnectionState.connected;
 
     final service = _activeService!;
-    vin = await service.getVIN() ?? 'No disponible';
-    protocol = await service.getProtocol() ?? 'Auto';
-    ecuCount = 1;
-    dtcCodes = await service.getDTCs();
+    try {
+      vin = await service.getVIN() ?? 'No disponible';
+      protocol = await service.getProtocol() ?? 'Auto';
+      ecuCount = 1;
+      dtcCodes = await service.getDTCs();
+    } catch (e) {
+      debugPrint('Error reading initial vehicle data: $e');
+      vin = 'No disponible';
+      protocol = 'Auto';
+      ecuCount = 1;
+      dtcCodes = [];
+    }
 
     _startPolling();
   }
@@ -367,40 +406,46 @@ class Obd2Provider extends ChangeNotifier {
       final service = _activeService;
       if (service == null) return;
 
-      final rpm = await service.getRPM();
-      final speed = await service.getSpeed();
-      final temp = await service.getCoolantTemp();
-      final load = await service.getEngineLoad();
-      final pressure = await service.getIntakeManifoldPressure();
-      final fuel = await service.getFuelLevel();
+      try {
+        final rpm = await service.getRPM();
+        final speed = await service.getSpeed();
+        final temp = await service.getCoolantTemp();
+        final load = await service.getEngineLoad();
+        final pressure = await service.getIntakeManifoldPressure();
+        final fuel = await service.getFuelLevel();
 
-      liveParams = [
-        liveParams[0].copyWith(
-          value: '${rpm ?? 0}',
-          percentage: ((rpm ?? 0) / 6000 * 100).clamp(0, 100),
-        ),
-        liveParams[1].copyWith(
-          value: '${speed ?? 0}',
-          percentage: ((speed ?? 0) / 240 * 100).clamp(0, 100),
-        ),
-        liveParams[2].copyWith(
-          value: '${temp ?? 0}',
-          percentage: ((temp ?? 0) / 125 * 100).clamp(0, 100),
-        ),
-        liveParams[3].copyWith(
-          value: '${load ?? 0}',
-          percentage: (load ?? 0).toDouble().clamp(0, 100),
-        ),
-        liveParams[4].copyWith(
-          value: '${pressure ?? 0}',
-          percentage: ((pressure ?? 0) / 100 * 100).clamp(0, 100),
-        ),
-        liveParams[5].copyWith(
-          value: '${fuel ?? 0}',
-          percentage: (fuel ?? 0).toDouble().clamp(0, 100),
-        ),
-      ];
-      notifyListeners();
+        liveParams = [
+          liveParams[0].copyWith(
+            value: '${rpm ?? 0}',
+            percentage: ((rpm ?? 0) / 6000 * 100).clamp(0, 100),
+          ),
+          liveParams[1].copyWith(
+            value: '${speed ?? 0}',
+            percentage: ((speed ?? 0) / 240 * 100).clamp(0, 100),
+          ),
+          liveParams[2].copyWith(
+            value: '${temp ?? 0}',
+            percentage: ((temp ?? 0) / 125 * 100).clamp(0, 100),
+          ),
+          liveParams[3].copyWith(
+            value: '${load ?? 0}',
+            percentage: (load ?? 0).toDouble().clamp(0, 100),
+          ),
+          liveParams[4].copyWith(
+            value: '${pressure ?? 0}',
+            percentage: ((pressure ?? 0) / 100 * 100).clamp(0, 100),
+          ),
+          liveParams[5].copyWith(
+            value: '${fuel ?? 0}',
+            percentage: (fuel ?? 0).toDouble().clamp(0, 100),
+          ),
+        ];
+        notifyListeners();
+      } catch (e) {
+        // Connection may have been lost during polling
+        debugPrint('Polling error: $e');
+        if (!isConnected) return;
+      }
     });
   }
 

@@ -1,5 +1,5 @@
 name: simple_obd2
-description: "OBD2 Scanner - Diagnóstico de Vehículo"
+description: "OBD2 Scanner - Aplicación de diagnóstico vehicular que se conecta a adaptadores ELM327 vía Bluetooth o WiFi para leer parámetros del motor en tiempo real, códigos de falla (DTC) y recomendaciones de mantenimiento."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -17,6 +17,7 @@ dependencies:
   provider: ^6.1.2
   google_fonts: ^6.2.1
   http: ^1.2.2
+  flutter_secure_storage: ^9.2.4
 
 dev_dependencies:
   flutter_test:

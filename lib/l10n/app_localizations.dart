@@ -195,6 +195,89 @@ class AppLocalizations {
   String get spanish => _t('Español', 'Spanish');
   String get english => _t('Inglés', 'English');
 
+  // ── Privacy Policy ──
+  String get privacyPolicyTitle =>
+      _t('Política de Privacidad', 'Privacy Policy');
+  String get privacyLastUpdated =>
+      _t('Última actualización: Febrero 2026', 'Last updated: February 2026');
+  String get privacyPolicyLink =>
+      _t('Política de Privacidad', 'Privacy Policy');
+
+  List<Map<String, String>> get privacySections => [
+    {
+      'title': _t('Información que recopilamos', 'Information We Collect'),
+      'body': _t(
+        'OBD2 Scanner accede a datos de diagnóstico del vehículo (RPM, velocidad, temperatura, códigos de falla) directamente desde el adaptador OBD2 conectado. Estos datos se procesan localmente en tu dispositivo y NO se envían a servidores externos ni se almacenan fuera de la aplicación.',
+        'OBD2 Scanner accesses vehicle diagnostic data (RPM, speed, temperature, fault codes) directly from the connected OBD2 adapter. This data is processed locally on your device and is NOT sent to external servers or stored outside the application.',
+      ),
+    },
+    {
+      'title': _t('Permisos del dispositivo', 'Device Permissions'),
+      'body': _t(
+        'Bluetooth: Necesario para comunicarse con adaptadores OBD2 ELM327 vía Bluetooth.\n'
+            'WiFi/Red Local: Necesario para conectarse a adaptadores OBD2 WiFi.\n'
+            'Ubicación: Requerido por el sistema operativo para escanear dispositivos Bluetooth cercanos. Tu ubicación NO se almacena ni se comparte.',
+        'Bluetooth: Required to communicate with OBD2 ELM327 adapters via Bluetooth.\n'
+            'WiFi/Local Network: Required to connect to WiFi OBD2 adapters.\n'
+            'Location: Required by the operating system to scan for nearby Bluetooth devices. Your location is NOT stored or shared.',
+      ),
+    },
+    {
+      'title': _t('Almacenamiento de datos', 'Data Storage'),
+      'body': _t(
+        'Todos los datos de diagnóstico se mantienen exclusivamente en la memoria de la aplicación durante la sesión activa. Al cerrar la aplicación o desconectar el adaptador, los datos se eliminan automáticamente. No utilizamos bases de datos, almacenamiento en la nube ni servicios de análisis.',
+        'All diagnostic data is kept exclusively in the application memory during the active session. When closing the app or disconnecting the adapter, data is automatically deleted. We do not use databases, cloud storage, or analytics services.',
+      ),
+    },
+    {
+      'title': _t('Servicios de terceros', 'Third-Party Services'),
+      'body': _t(
+        'La aplicación puede utilizar Google Fonts para la tipografía, lo cual requiere una conexión a internet.\n\n'
+            'Función de Diagnóstico AI (opcional): Si activas el diagnóstico con inteligencia artificial, los datos del vehículo (parámetros del motor, códigos de falla y VIN) se envían a la API de Google Gemini para generar un análisis. Esta función es completamente opcional y solo se activa cuando el usuario la solicita explícitamente. Google puede procesar estos datos según su política de privacidad.',
+        'The application may use Google Fonts for typography, which requires an internet connection.\n\n'
+            'AI Diagnostic Feature (optional): If you activate the AI diagnostic, vehicle data (engine parameters, fault codes, and VIN) is sent to the Google Gemini API to generate an analysis. This feature is completely optional and only activates when the user explicitly requests it. Google may process this data according to their privacy policy.',
+      ),
+    },
+    {
+      'title': _t('Contacto', 'Contact'),
+      'body': _t(
+        'Si tienes preguntas sobre esta política de privacidad, puedes contactarnos a través de la página de la aplicación en la tienda de aplicaciones.',
+        'If you have questions about this privacy policy, you can contact us through the application page on the app store.',
+      ),
+    },
+  ];
+
+  // ── Permissions ──
+  String get permissionsRequired =>
+      _t('Permisos Necesarios', 'Permissions Required');
+  String get permissionsBluetoothTitle => _t('Bluetooth', 'Bluetooth');
+  String get permissionsBluetoothDesc => _t(
+    'Para conectarse al adaptador OBD2 ELM327',
+    'To connect to the OBD2 ELM327 adapter',
+  );
+  String get permissionsLocationTitle => _t('Ubicación', 'Location');
+  String get permissionsLocationDesc => _t(
+    'Requerido por el sistema para detectar dispositivos Bluetooth. No almacenamos tu ubicación.',
+    'Required by the system to detect Bluetooth devices. We do not store your location.',
+  );
+  String get permissionsGrantAll =>
+      _t('Conceder Permisos', 'Grant Permissions');
+  String get permissionsDeniedMsg => _t(
+    'Algunos permisos fueron denegados. Puedes habilitarlos en Ajustes del dispositivo.',
+    'Some permissions were denied. You can enable them in device Settings.',
+  );
+  String get permissionsOpenSettings => _t('Abrir Ajustes', 'Open Settings');
+
+  // ── Clear Codes Confirmation ──
+  String get clearCodesConfirmTitle =>
+      _t('¿Borrar códigos de falla?', 'Clear fault codes?');
+  String get clearCodesConfirmMsg => _t(
+    'Esta acción borrará todos los códigos de diagnóstico (DTC) del vehículo. Los códigos volverán a aparecer si el problema persiste.',
+    'This will clear all diagnostic trouble codes (DTC) from the vehicle. Codes will reappear if the problem persists.',
+  );
+  String get cancel => _t('Cancelar', 'Cancel');
+  String get confirm => _t('Confirmar', 'Confirm');
+
   String _t(String es, String en) => language == AppLanguage.es ? es : en;
 }
 

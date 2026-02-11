@@ -26,7 +26,15 @@ class WifiObd2Service implements Obd2BaseService {
     int port = defaultPort,
     Duration timeout = const Duration(seconds: 10),
   }) async {
-    _socket = await Socket.connect(host, port, timeout: timeout);
+    try {
+      _socket = await Socket.connect(host, port, timeout: timeout);
+    } on SocketException catch (e) {
+      _connected = false;
+      throw Exception(
+        'No se pudo conectar a $host:$port. '
+        'Verifica la conexión WiFi al adaptador OBD2. ($e)',
+      );
+    }
     _connected = true;
 
     _socket!.listen(

@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Simple Obd2</string>
+	<string>OBD2 Scanner</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>simple_obd2</string>
+	<string>OBD2 Scanner</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -45,16 +45,36 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- Bluetooth permissions -->
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Esta app necesita Bluetooth para conectarse al adaptador OBD2 de tu vehículo</string>
+	<string>OBD2 Scanner necesita acceso a Bluetooth para comunicarse con el adaptador de diagnóstico ELM327 conectado al puerto OBD-II de tu vehículo y leer datos del motor en tiempo real.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>Esta app necesita Bluetooth para conectarse al adaptador OBD2 de tu vehículo</string>
+	<string>OBD2 Scanner necesita acceso a Bluetooth para comunicarse con el adaptador de diagnóstico ELM327 conectado al puerto OBD-II de tu vehículo.</string>
+
+	<!-- Network permissions -->
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Esta app necesita acceso a la red local para conectarse al adaptador OBD2 vía WiFi</string>
+	<string>OBD2 Scanner necesita acceso a la red local para conectarse al adaptador OBD2 ELM327 vía WiFi y leer datos de diagnóstico del vehículo.</string>
+
+	<!-- Location (required for Bluetooth scanning on some iOS versions) -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>OBD2 Scanner necesita acceso a tu ubicación para detectar dispositivos Bluetooth cercanos como el adaptador OBD2 ELM327. Tu ubicación no se almacena ni se comparte.</string>
+
+	<!-- Network security -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+
+	<!-- Bonjour services for local network discovery -->
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_obd2._tcp</string>
+	</array>
+
+	<!-- Export compliance (no encryption beyond standard HTTPS) -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

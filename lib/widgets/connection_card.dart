@@ -122,24 +122,31 @@ class ConnectionCard extends StatelessWidget {
   Widget _buildStatusIcon() {
     final Color bgColor;
     final Color iconColor;
+    final String statusLabel;
     if (isConnected) {
       bgColor = AppTheme.success.withValues(alpha: 0.12);
       iconColor = AppTheme.success;
+      statusLabel = 'Connected';
     } else if (isConnecting) {
       bgColor = AppTheme.primary.withValues(alpha: 0.12);
       iconColor = AppTheme.primary;
+      statusLabel = 'Connecting';
     } else {
       bgColor = AppTheme.textTertiary.withValues(alpha: 0.12);
       iconColor = AppTheme.textTertiary;
+      statusLabel = 'Disconnected';
     }
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(14),
+    return Semantics(
+      label: statusLabel,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(Icons.bluetooth_rounded, size: 22, color: iconColor),
       ),
-      child: Icon(Icons.bluetooth_rounded, size: 22, color: iconColor),
     );
   }
 }

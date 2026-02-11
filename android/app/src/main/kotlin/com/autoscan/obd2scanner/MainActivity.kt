@@ -1,4 +1,4 @@
-package com.example.simple_obd2
+package com.autoscan.obd2scanner
 
 import io.flutter.embedding.android.FlutterActivity
 

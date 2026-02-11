@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/language_provider.dart';
 import '../providers/obd2_provider.dart';
+import '../screens/privacy_policy_screen.dart';
 import '../theme/app_theme.dart';
 import '../widgets/connection_card.dart';
 import '../widgets/vehicle_info_card.dart';
@@ -37,6 +39,17 @@ class _HomeScreenState extends State<HomeScreen>
 
   void _showDevicePicker(BuildContext context) async {
     final provider = context.read<Obd2Provider>();
+    final l = AppLocalizations.of(context);
+
+    // Request runtime permissions before attempting connection
+    final permissionsGranted = await _requestPermissions(context);
+    if (!permissionsGranted) {
+      if (!context.mounted) return;
+      _showPermissionDeniedDialog(context, l);
+      return;
+    }
+
+    if (!context.mounted) return;
 
     if (!provider.isIOS) {
       showModalBottomSheet(
@@ -77,6 +90,60 @@ class _HomeScreenState extends State<HomeScreen>
         onWifiConnect: (host, port) =>
             provider.connectWifi(host: host, port: port),
         onUseMock: () => provider.connectMock(),
+      ),
+    );
+  }
+
+  /// Requests Bluetooth and Location permissions at runtime.
+  /// Returns true if all required permissions are granted.
+  Future<bool> _requestPermissions(BuildContext context) async {
+    final provider = context.read<Obd2Provider>();
+
+    if (provider.isIOS) {
+      // iOS: Bluetooth permission is handled by the system dialog via Info.plist
+      // We only need to check if Bluetooth is available
+      return true;
+    }
+
+    // Android: Request Bluetooth + Location permissions
+    final statuses = await [
+      Permission.bluetoothConnect,
+      Permission.bluetoothScan,
+      Permission.locationWhenInUse,
+    ].request();
+
+    final allGranted = statuses.values.every(
+      (status) => status.isGranted || status.isLimited,
+    );
+
+    return allGranted;
+  }
+
+  void _showPermissionDeniedDialog(BuildContext context, AppLocalizations l) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          l.permissionsRequired,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        ),
+        content: Text(
+          l.permissionsDeniedMsg,
+          style: GoogleFonts.inter(fontSize: 14, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l.disconnect),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              openAppSettings();
+            },
+            child: Text(l.permissionsOpenSettings),
+          ),
+        ],
       ),
     );
   }
@@ -176,6 +243,29 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
           _buildLanguageToggle(),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+            ),
+            child: Semantics(
+              label: AppLocalizations.of(context).privacyPolicyLink,
+              button: true,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.shield_outlined,
+                  size: 18,
+                  color: AppTheme.primary,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -183,32 +273,37 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildLanguageToggle() {
     final langProvider = context.watch<LanguageProvider>();
-    return GestureDetector(
-      onTap: () => langProvider.toggleLanguage(),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppTheme.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.language_rounded,
-              size: 16,
-              color: AppTheme.primary,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              langProvider.locale.toUpperCase(),
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+    final l = AppLocalizations.of(context);
+    return Semantics(
+      label: l.languageLabel,
+      button: true,
+      child: GestureDetector(
+        onTap: () => langProvider.toggleLanguage(),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppTheme.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.language_rounded,
+                size: 16,
                 color: AppTheme.primary,
               ),
-            ),
-          ],
+              const SizedBox(width: 4),
+              Text(
+                langProvider.locale.toUpperCase(),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

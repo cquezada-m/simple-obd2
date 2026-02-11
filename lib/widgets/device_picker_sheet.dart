@@ -28,12 +28,31 @@ class DevicePickerSheet extends StatefulWidget {
 
 class _DevicePickerSheetState extends State<DevicePickerSheet> {
   late bool _showWifi;
+  final _formKey = GlobalKey<FormState>();
   final _hostController = TextEditingController(
     text: WifiObd2Service.defaultHost,
   );
   final _portController = TextEditingController(
     text: '${WifiObd2Service.defaultPort}',
   );
+
+  String? _validateIp(String? value) {
+    if (value == null || value.trim().isEmpty) return 'IP requerida';
+    final parts = value.trim().split('.');
+    if (parts.length != 4) return 'IP inválida (ej: 192.168.0.10)';
+    for (final p in parts) {
+      final n = int.tryParse(p);
+      if (n == null || n < 0 || n > 255) return 'IP inválida';
+    }
+    return null;
+  }
+
+  String? _validatePort(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Puerto requerido';
+    final n = int.tryParse(value.trim());
+    if (n == null || n < 1 || n > 65535) return 'Puerto inválido (1-65535)';
+    return null;
+  }
 
   @override
   void initState() {
@@ -213,127 +232,135 @@ class _DevicePickerSheetState extends State<DevicePickerSheet> {
   }
 
   Widget _buildWifiSection(AppLocalizations l) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.info_outline_rounded,
-                    size: 15,
-                    color: AppTheme.primary.withValues(alpha: 0.7),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    l.howToConnectWifi,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.primary,
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 15,
+                      color: AppTheme.primary.withValues(alpha: 0.7),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Text(
+                      l.howToConnectWifi,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                _WifiStep(number: '1', text: l.wifiStep1),
+                const SizedBox(height: 6),
+                _WifiStep(number: '2', text: l.wifiStep2),
+                const SizedBox(height: 6),
+                _WifiStep(number: '3', text: l.wifiStep3),
+                const SizedBox(height: 6),
+                _WifiStep(number: '4', text: l.wifiStep4),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            l.ipAddress,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _hostController,
+            keyboardType: TextInputType.number,
+            validator: _validateIp,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            style: GoogleFonts.inter(fontSize: 14),
+            decoration: InputDecoration(
+              hintText: '192.168.0.10',
+              hintStyle: GoogleFonts.inter(color: AppTheme.textTertiary),
+              prefixIcon: const Icon(Icons.router_outlined, size: 20),
+              filled: true,
+              fillColor: Colors.white.withValues(alpha: 0.6),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
               ),
-              const SizedBox(height: 10),
-              _WifiStep(number: '1', text: l.wifiStep1),
-              const SizedBox(height: 6),
-              _WifiStep(number: '2', text: l.wifiStep2),
-              const SizedBox(height: 6),
-              _WifiStep(number: '3', text: l.wifiStep3),
-              const SizedBox(height: 6),
-              _WifiStep(number: '4', text: l.wifiStep4),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          l.ipAddress,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: AppTheme.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: _hostController,
-          keyboardType: TextInputType.number,
-          style: GoogleFonts.inter(fontSize: 14),
-          decoration: InputDecoration(
-            hintText: '192.168.0.10',
-            hintStyle: GoogleFonts.inter(color: AppTheme.textTertiary),
-            prefixIcon: const Icon(Icons.router_outlined, size: 20),
-            filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.6),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          l.port,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: AppTheme.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: _portController,
-          keyboardType: TextInputType.number,
-          style: GoogleFonts.inter(fontSize: 14),
-          decoration: InputDecoration(
-            hintText: '35000',
-            hintStyle: GoogleFonts.inter(color: AppTheme.textTertiary),
-            prefixIcon: const Icon(Icons.tag_rounded, size: 20),
-            filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.6),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
+          const SizedBox(height: 12),
+          Text(
+            l.port,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.textPrimary,
             ),
           ),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              final host = _hostController.text.trim();
-              final port =
-                  int.tryParse(_portController.text.trim()) ??
-                  WifiObd2Service.defaultPort;
-              Navigator.pop(context);
-              widget.onWifiConnect(host, port);
-            },
-            icon: const Icon(Icons.wifi_rounded, size: 18),
-            label: Text(
-              l.connectViaWifiBtn,
-              style: GoogleFonts.inter(fontSize: 14),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _portController,
+            keyboardType: TextInputType.number,
+            validator: _validatePort,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            style: GoogleFonts.inter(fontSize: 14),
+            decoration: InputDecoration(
+              hintText: '35000',
+              hintStyle: GoogleFonts.inter(color: AppTheme.textTertiary),
+              prefixIcon: const Icon(Icons.tag_rounded, size: 20),
+              filled: true,
+              fillColor: Colors.white.withValues(alpha: 0.6),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                if (!_formKey.currentState!.validate()) return;
+                final host = _hostController.text.trim();
+                final port =
+                    int.tryParse(_portController.text.trim()) ??
+                    WifiObd2Service.defaultPort;
+                Navigator.pop(context);
+                widget.onWifiConnect(host, port);
+              },
+              icon: const Icon(Icons.wifi_rounded, size: 18),
+              label: Text(
+                l.connectViaWifiBtn,
+                style: GoogleFonts.inter(fontSize: 14),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

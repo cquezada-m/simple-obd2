@@ -1,6 +1,9 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/language_provider.dart';
@@ -9,14 +12,40 @@ import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ),
+  runZonedGuarded(
+    () {
+      WidgetsFlutterBinding.ensureInitialized();
+
+      // Prevent Google Fonts from fetching over network.
+      // The app may run on the OBD2 adapter's WiFi with no internet.
+      // Fonts fall back to the platform default when not bundled.
+      GoogleFonts.config.allowRuntimeFetching = false;
+
+      SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+        ),
+      );
+
+      // Catch Flutter framework errors
+      FlutterError.onError = (details) {
+        FlutterError.presentError(details);
+        if (kDebugMode) {
+          debugPrint('FlutterError: ${details.exceptionAsString()}');
+        }
+      };
+
+      runApp(const OBD2App());
+    },
+    (error, stackTrace) {
+      // Catch async errors not handled by Flutter
+      if (kDebugMode) {
+        debugPrint('Unhandled error: $error');
+        debugPrint('Stack trace: $stackTrace');
+      }
+    },
   );
-  runApp(const OBD2App());
 }
 
 class OBD2App extends StatelessWidget {
@@ -27,7 +56,14 @@ class OBD2App extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
-        ChangeNotifierProvider(create: (_) => Obd2Provider()),
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = Obd2Provider();
+            // Carga el API key de Gemini desde almacenamiento seguro al iniciar.
+            provider.loadGeminiApiKey();
+            return provider;
+          },
+        ),
       ],
       child: Consumer<LanguageProvider>(
         builder: (context, langProvider, _) {
