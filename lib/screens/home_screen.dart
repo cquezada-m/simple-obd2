@@ -183,6 +183,7 @@ class _HomeScreenState extends State<HomeScreen>
                             vin: provider.vin,
                             protocol: provider.protocol,
                             ecuCount: provider.ecuCount,
+                            vehicleInfo: provider.vehicleInfo,
                           ),
                           _buildTabs(provider),
                         ] else if (!provider.isConnecting) ...[

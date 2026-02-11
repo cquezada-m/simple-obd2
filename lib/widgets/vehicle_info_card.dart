@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../l10n/app_localizations.dart';
+import '../models/vehicle_info.dart';
 import '../theme/app_theme.dart';
 
 class VehicleInfoCard extends StatelessWidget {
   final String vin;
   final String protocol;
   final int ecuCount;
+  final VehicleInfo vehicleInfo;
 
   const VehicleInfoCard({
     super.key,
     required this.vin,
     required this.protocol,
     required this.ecuCount,
+    required this.vehicleInfo,
   });
 
   @override
@@ -64,6 +67,26 @@ class VehicleInfoCard extends StatelessWidget {
           const SizedBox(height: 16),
           _infoRow(Icons.shield_outlined, 'VIN', vin, mono: true),
           const SizedBox(height: 8),
+          if (vehicleInfo.manufacturer != null) ...[
+            _infoRow(
+              Icons.factory_outlined,
+              l.manufacturer,
+              vehicleInfo.manufacturer!,
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (vehicleInfo.modelYear != null) ...[
+            _infoRow(
+              Icons.calendar_today_outlined,
+              l.modelYear,
+              '${vehicleInfo.modelYear}',
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (vehicleInfo.region != null) ...[
+            _infoRow(Icons.public_outlined, l.region, vehicleInfo.region!),
+            const SizedBox(height: 8),
+          ],
           _infoRow(Icons.info_outline_rounded, l.protocol, protocol),
           const SizedBox(height: 8),
           _infoRow(Icons.memory_rounded, l.ecusDetected, '$ecuCount'),

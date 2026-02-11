@@ -117,6 +117,7 @@ class Obd2Service implements Obd2BaseService {
   @override
   Future<int?> getRPM() async {
     final response = await _sendCommand('010C');
+    if (WifiObd2Service.isErrorResponse(response)) return null;
     final raw = Obd2BaseService.parseTwoBytes(response, expectedHeader: '410C');
     final rpm = raw != null ? raw ~/ 4 : null;
     _log.log(LogCategory.parse, 'RPM: raw=$raw, value=$rpm');
@@ -127,6 +128,7 @@ class Obd2Service implements Obd2BaseService {
   @override
   Future<int?> getSpeed() async {
     final response = await _sendCommand('010D');
+    if (WifiObd2Service.isErrorResponse(response)) return null;
     final speed = Obd2BaseService.parseOneByte(
       response,
       expectedHeader: '410D',
@@ -139,6 +141,7 @@ class Obd2Service implements Obd2BaseService {
   @override
   Future<int?> getCoolantTemp() async {
     final response = await _sendCommand('0105');
+    if (WifiObd2Service.isErrorResponse(response)) return null;
     final raw = Obd2BaseService.parseOneByte(response, expectedHeader: '4105');
     final temp = raw != null ? raw - 40 : null;
     _log.log(LogCategory.parse, 'Coolant temp: raw=$raw, value=$temp°C');
@@ -149,6 +152,7 @@ class Obd2Service implements Obd2BaseService {
   @override
   Future<int?> getEngineLoad() async {
     final response = await _sendCommand('0104');
+    if (WifiObd2Service.isErrorResponse(response)) return null;
     final raw = Obd2BaseService.parseOneByte(response, expectedHeader: '4104');
     final load = raw != null ? (raw * 100) ~/ 255 : null;
     _log.log(LogCategory.parse, 'Engine load: raw=$raw, value=$load%');
@@ -159,6 +163,7 @@ class Obd2Service implements Obd2BaseService {
   @override
   Future<int?> getIntakeManifoldPressure() async {
     final response = await _sendCommand('010B');
+    if (WifiObd2Service.isErrorResponse(response)) return null;
     final pressure = Obd2BaseService.parseOneByte(
       response,
       expectedHeader: '410B',
@@ -171,6 +176,7 @@ class Obd2Service implements Obd2BaseService {
   @override
   Future<int?> getFuelLevel() async {
     final response = await _sendCommand('012F');
+    if (WifiObd2Service.isErrorResponse(response)) return null;
     final raw = Obd2BaseService.parseOneByte(response, expectedHeader: '412F');
     final fuel = raw != null ? (raw * 100) ~/ 255 : null;
     _log.log(LogCategory.parse, 'Fuel level: raw=$raw, value=$fuel%');
@@ -181,7 +187,9 @@ class Obd2Service implements Obd2BaseService {
   @override
   Future<String?> getVIN() async {
     final response = await _sendCommand('0902');
-    if (response == null || response.isEmpty || response.contains('NO DATA')) {
+    if (response == null ||
+        response.isEmpty ||
+        WifiObd2Service.isErrorResponse(response)) {
       _log.log(LogCategory.vin, 'VIN: no data');
       return null;
     }
@@ -203,11 +211,64 @@ class Obd2Service implements Obd2BaseService {
     return response?.trim();
   }
 
+  /// Detecta el número de ECUs respondiendo al PID 0100.
+  Future<int> detectECUCount() async {
+    await _sendCommand('ATH1');
+    final response = await _sendCommand('0100');
+    await _sendCommand('ATH0');
+
+    if (response == null ||
+        response.isEmpty ||
+        WifiObd2Service.isErrorResponse(response)) {
+      _log.log(LogCategory.connection, 'ECU detection: no response');
+      return 0;
+    }
+
+    _log.log(LogCategory.connection, 'ECU detection raw: $response');
+
+    final lines = response
+        .split(RegExp(r'[\r\n]+'))
+        .map((l) => l.trim())
+        .where(
+          (l) =>
+              l.isNotEmpty &&
+              !l.startsWith('SEARCHING') &&
+              !l.startsWith('AT') &&
+              !WifiObd2Service.isErrorLine(l),
+        )
+        .toList();
+
+    final ecuAddresses = <String>{};
+    for (final line in lines) {
+      final hex = line.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
+      if (hex.toUpperCase().contains('4100')) {
+        final idx4100 = hex.toUpperCase().indexOf('4100');
+        if (idx4100 >= 3) {
+          ecuAddresses.add(hex.substring(0, 3));
+        } else {
+          ecuAddresses.add('ECU_${ecuAddresses.length}');
+        }
+      }
+    }
+
+    final count = ecuAddresses.isEmpty
+        ? (lines.isNotEmpty ? 1 : 0)
+        : ecuAddresses.length;
+    _log.log(
+      LogCategory.connection,
+      'ECU detection: $count ECU(s) found',
+      'Addresses: ${ecuAddresses.join(", ")}',
+    );
+    return count;
+  }
+
   /// Lee códigos DTC
   @override
   Future<List<DtcCode>> getDTCs() async {
     final response = await _sendCommand('03');
-    if (response == null || response.isEmpty || response.contains('NO DATA')) {
+    if (response == null ||
+        response.isEmpty ||
+        WifiObd2Service.isErrorResponse(response)) {
       _log.log(LogCategory.dtc, 'DTCs: no active codes');
       return [];
     }

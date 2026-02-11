@@ -30,29 +30,44 @@ abstract class Obd2BaseService {
       return null;
     }
 
+    // Rechazar respuestas que son puramente errores ELM327
+    final upper = response.toUpperCase();
+    if (upper.trim() == 'STOPPED' ||
+        upper.trim() == '?' ||
+        upper.startsWith('ERROR')) {
+      return null;
+    }
+
     final lines = response
         .split(RegExp(r'[\r\n]+'))
         .map((l) => l.trim())
         .where(
           (l) =>
-              l.isNotEmpty && !l.startsWith('SEARCHING') && !l.startsWith('AT'),
+              l.isNotEmpty &&
+              !l.startsWith('SEARCHING') &&
+              !l.startsWith('AT') &&
+              !l.toUpperCase().startsWith('STOPPED') &&
+              l != '?',
         )
         .toList();
 
     for (final line in lines) {
+      // Saltar líneas que son negative response (7F xx xx)
+      final lineHex = line
+          .replaceAll(RegExp(r'[^0-9A-Fa-f]'), '')
+          .toUpperCase();
+      if (RegExp(r'^7F[0-9A-F]{4}').hasMatch(lineHex)) continue;
+
       final hex = line.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
       // Look for the expected response header (e.g., "410C" for RPM)
-      final idx = hex.indexOf(expectedHeader);
+      final idx = hex.toUpperCase().indexOf(expectedHeader.toUpperCase());
       if (idx >= 0) {
         return hex.substring(idx + expectedHeader.length);
       }
     }
 
-    // Fallback: strip first 4 hex chars as before
-    final cleaned = response.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
-    if (cleaned.length > 4) {
-      return cleaned.substring(4);
-    }
+    // NO fallback — si no encontramos el header esperado, no adivinamos.
+    // El fallback anterior causaba que "STOPPED7F1022" se parseara como datos válidos.
     return null;
   }
 

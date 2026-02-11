@@ -9,6 +9,7 @@ import '../models/dtc_code.dart';
 import '../models/vehicle_parameter.dart';
 import '../models/recommendation.dart';
 import '../models/ai_diagnostic.dart';
+import '../models/vehicle_info.dart';
 import '../services/gemini_service.dart';
 import '../services/secure_storage_service.dart';
 import '../services/obd2_base_service.dart';
@@ -37,6 +38,7 @@ class Obd2Provider extends ChangeNotifier {
   String vin = '';
   String protocol = '';
   int ecuCount = 0;
+  VehicleInfo vehicleInfo = const VehicleInfo();
   bool isClearing = false;
   bool useMockData = false;
   String? connectionError;
@@ -129,6 +131,19 @@ class Obd2Provider extends ChangeNotifier {
     ConnectionMode.wifi => _wifiService,
     null => null,
   };
+
+  /// Llamado cuando el servicio WiFi detecta una desconexión inesperada.
+  void _onServiceDisconnected() {
+    _log.log(
+      LogCategory.connection,
+      'Provider: service disconnected unexpectedly',
+    );
+    _cancelPolling();
+    connectionState = ConnectionState.disconnected;
+    connectionError = 'Conexión perdida con el adaptador OBD2.';
+    activeMode = null;
+    notifyListeners();
+  }
 
   Obd2Provider() {
     _initDefaultParams();
@@ -252,6 +267,7 @@ class Obd2Provider extends ChangeNotifier {
     );
 
     try {
+      _wifiService.onDisconnected = _onServiceDisconnected;
       await _wifiService.connect(host: targetHost, port: targetPort);
       await _onConnected();
     } catch (e) {
@@ -278,12 +294,23 @@ class Obd2Provider extends ChangeNotifier {
     try {
       vin = await service.getVIN() ?? 'No disponible';
       protocol = await service.getProtocol() ?? 'Auto';
-      ecuCount = 1;
+
+      // Detectar ECUs reales
+      if (service is WifiObd2Service) {
+        ecuCount = await service.detectECUCount();
+      } else if (service is Obd2Service) {
+        ecuCount = await service.detectECUCount();
+      } else {
+        ecuCount = 1;
+      }
+      if (ecuCount == 0) ecuCount = 1; // mínimo 1 si estamos conectados
+
+      vehicleInfo = VehicleInfo.fromVIN(vin);
       dtcCodes = await service.getDTCs();
       _log.log(
         LogCategory.connection,
         'Provider: initial data read',
-        'VIN: $vin, Protocolo: $protocol, DTCs: ${dtcCodes.length}',
+        'VIN: $vin, Protocolo: $protocol, ECUs: $ecuCount, DTCs: ${dtcCodes.length}, Manufacturer: ${vehicleInfo.manufacturer}',
       );
     } catch (e) {
       _log.log(LogCategory.error, 'Provider: error reading initial data', '$e');
@@ -385,11 +412,12 @@ class Obd2Provider extends ChangeNotifier {
         bgColor: AppTheme.successLight,
       ),
     ];
+    vehicleInfo = VehicleInfo.fromVIN(vin);
     _startMockPolling();
     _log.log(
       LogCategory.connection,
       'Provider: MOCK mode active',
-      'VIN: $vin, DTCs: ${dtcCodes.length}',
+      'VIN: $vin, DTCs: ${dtcCodes.length}, Manufacturer: ${vehicleInfo.manufacturer}',
     );
     notifyListeners();
   }
@@ -413,6 +441,7 @@ class Obd2Provider extends ChangeNotifier {
     vin = '';
     protocol = '';
     ecuCount = 0;
+    vehicleInfo = const VehicleInfo();
     aiDiagnostic = null;
     aiDiagnosticError = null;
     _initDefaultParams();
@@ -434,88 +463,135 @@ class Obd2Provider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Polling (tiered: fast 200ms for RPM/Speed, slow 5s for the rest) ──
+  // ── Polling (single sequential loop to avoid socket contention) ──
 
   void _cancelPolling() {
     _fastPollingTimer?.cancel();
     _slowPollingTimer?.cancel();
+    _fastPollingTimer = null;
+    _slowPollingTimer = null;
   }
+
+  /// Contador de ciclos para intercalar parámetros lentos.
+  int _pollCycle = 0;
 
   void _startPolling() {
     _cancelPolling();
     final service = _activeService;
     if (service == null) return;
-    _log.log(LogCategory.parameter, 'Polling: starting (fast=200ms, slow=5s)');
+    _pollCycle = 0;
+    _log.log(
+      LogCategory.parameter,
+      'Polling: starting (sequential, 500ms cycle)',
+    );
 
-    // Fast tier: RPM + Speed every 200ms
-    _fastPollingTimer = Timer.periodic(const Duration(milliseconds: 200), (
-      _,
-    ) async {
+    // Un solo timer secuencial. Cada ciclo lee RPM+Speed.
+    // Cada 10 ciclos (~5s) también lee temp, load, pressure, fuel.
+    _fastPollingTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
       if (!isConnected || useMockData) return;
-      try {
-        final rpm = await service.getRPM();
-        final speed = await service.getSpeed();
-        liveParams = [
-          liveParams[0].copyWith(
-            value: '${rpm ?? 0}',
-            percentage: ((rpm ?? 0) / 6000 * 100).clamp(0, 100),
-          ),
-          liveParams[1].copyWith(
-            value: '${speed ?? 0}',
-            percentage: ((speed ?? 0) / 240 * 100).clamp(0, 100),
-          ),
-          liveParams[2],
-          liveParams[3],
-          liveParams[4],
-          liveParams[5],
-        ];
-        notifyListeners();
-      } catch (e) {
-        _log.log(LogCategory.error, 'Fast polling error', '$e');
-        debugPrint('Fast polling error: $e');
-      }
+      _pollOneCycle(service);
     });
 
-    // Slow tier: Temp, Load, Pressure, Fuel every 5s
-    _pollSlowParams(service); // immediate first read
-    _slowPollingTimer = Timer.periodic(
-      const Duration(seconds: 5),
-      (_) => _pollSlowParams(service),
-    );
+    // Lectura inicial de parámetros lentos
+    _pollOneCycle(service, forceSlowRead: true);
+  }
+
+  bool _isPolling = false;
+
+  Future<void> _pollOneCycle(
+    Obd2BaseService service, {
+    bool forceSlowRead = false,
+  }) async {
+    // Evitar que se acumulen ciclos si el anterior no terminó
+    if (_isPolling) return;
+    _isPolling = true;
+
+    try {
+      if (!isConnected || useMockData) return;
+
+      // Leer RPM y Speed (siempre)
+      final rpm = await service.getRPM();
+      if (!isConnected) return;
+      final speed = await service.getSpeed();
+      if (!isConnected) return;
+
+      // Actualizar solo si obtuvimos dato real (null = mantener último valor)
+      liveParams = [
+        rpm != null
+            ? liveParams[0].copyWith(
+                value: '$rpm',
+                percentage: (rpm / 6000 * 100).clamp(0, 100),
+              )
+            : liveParams[0],
+        speed != null
+            ? liveParams[1].copyWith(
+                value: '$speed',
+                percentage: (speed / 240 * 100).clamp(0, 100),
+              )
+            : liveParams[1],
+        liveParams[2],
+        liveParams[3],
+        liveParams[4],
+        liveParams[5],
+      ];
+      notifyListeners();
+
+      // Cada 10 ciclos (~5s) leer parámetros lentos
+      _pollCycle++;
+      if (forceSlowRead || _pollCycle >= 10) {
+        _pollCycle = 0;
+        await _pollSlowParams(service);
+      }
+    } catch (e) {
+      _log.log(LogCategory.error, 'Polling error', '$e');
+      debugPrint('Polling error: $e');
+    } finally {
+      _isPolling = false;
+    }
   }
 
   Future<void> _pollSlowParams(Obd2BaseService service) async {
     if (!isConnected || useMockData) return;
-    try {
-      final temp = await service.getCoolantTemp();
-      final load = await service.getEngineLoad();
-      final pressure = await service.getIntakeManifoldPressure();
-      final fuel = await service.getFuelLevel();
-      liveParams = [
-        liveParams[0],
-        liveParams[1],
-        liveParams[2].copyWith(
-          value: '${temp ?? 0}',
-          percentage: ((temp ?? 0) / 125 * 100).clamp(0, 100),
-        ),
-        liveParams[3].copyWith(
-          value: '${load ?? 0}',
-          percentage: (load ?? 0).toDouble().clamp(0, 100),
-        ),
-        liveParams[4].copyWith(
-          value: '${pressure ?? 0}',
-          percentage: ((pressure ?? 0) / 100 * 100).clamp(0, 100),
-        ),
-        liveParams[5].copyWith(
-          value: '${fuel ?? 0}',
-          percentage: (fuel ?? 0).toDouble().clamp(0, 100),
-        ),
-      ];
-      notifyListeners();
-    } catch (e) {
-      _log.log(LogCategory.error, 'Slow polling error', '$e');
-      debugPrint('Slow polling error: $e');
-    }
+
+    final temp = await service.getCoolantTemp();
+    if (!isConnected) return;
+    final load = await service.getEngineLoad();
+    if (!isConnected) return;
+    final pressure = await service.getIntakeManifoldPressure();
+    if (!isConnected) return;
+    final fuel = await service.getFuelLevel();
+    if (!isConnected) return;
+
+    // Solo actualizar si obtuvimos dato real
+    liveParams = [
+      liveParams[0],
+      liveParams[1],
+      temp != null
+          ? liveParams[2].copyWith(
+              value: '$temp',
+              percentage: (temp / 125 * 100).clamp(0, 100),
+            )
+          : liveParams[2],
+      load != null
+          ? liveParams[3].copyWith(
+              value: '$load',
+              percentage: load.toDouble().clamp(0, 100),
+            )
+          : liveParams[3],
+      pressure != null
+          ? liveParams[4].copyWith(
+              value: '$pressure',
+              percentage: (pressure / 100 * 100).clamp(0, 100),
+            )
+          : liveParams[4],
+      fuel != null
+          ? liveParams[5].copyWith(
+              value: '$fuel',
+              percentage: fuel.toDouble().clamp(0, 100),
+            )
+          : liveParams[5],
+    ];
+    notifyListeners();
   }
 
   void _startMockPolling() {

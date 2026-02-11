@@ -79,6 +79,9 @@ class AppLocalizations {
   String get obd2SystemData => _t('Datos del sistema OBD2', 'OBD2 system data');
   String get protocol => _t('Protocolo', 'Protocol');
   String get ecusDetected => _t('ECUs Detectadas', 'ECUs Detected');
+  String get manufacturer => _t('Fabricante', 'Manufacturer');
+  String get modelYear => _t('Año', 'Year');
+  String get region => _t('Región', 'Region');
 
   // ── Tabs ──
   String get diagnosticTab => _t('Diagnóstico', 'Diagnostics');
