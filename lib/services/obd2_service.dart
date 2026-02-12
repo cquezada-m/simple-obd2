@@ -382,6 +382,19 @@ class Obd2Service implements Obd2BaseService {
   }
 
   @override
+  Future<String?> sendRawCommand(String command) => _sendCommand(command);
+
+  @override
+  Future<List<int>?> queryPid(String pid) async {
+    final response = await _sendCommand(_pidCommand(pid));
+    if (WifiObd2Service.isErrorResponse(response)) return null;
+    final pidHex = pid.length >= 4 ? pid.substring(2) : pid;
+    final header = '41$pidHex'.toUpperCase();
+    final data = Obd2BaseService.extractResponseBytes(response, header);
+    return data;
+  }
+
+  @override
   void dispose() {
     disconnect();
     _responseController.close();

@@ -18,6 +18,14 @@ abstract class Obd2BaseService {
   Future<List<DtcCode>> getDTCs();
   Future<bool> clearDTCs();
 
+  /// Sends a raw OBD2 command and returns the raw response string.
+  /// Used by PID discovery and generic PID reading.
+  Future<String?> sendRawCommand(String command);
+
+  /// Queries a generic PID and returns the raw data bytes.
+  /// Used by the sensor explorer and mileage verification.
+  Future<List<int>?> queryPid(String pid);
+
   void dispose();
 
   // Helpers compartidos para decodificar respuestas OBD2
@@ -175,5 +183,20 @@ abstract class Obd2BaseService {
         (locale == 'es'
             ? 'Código de diagnóstico: $code'
             : 'Diagnostic code: $code');
+  }
+
+  /// Extracts raw data bytes from an OBD2 response given the expected header.
+  /// Returns a list of integer byte values, or null if parsing fails.
+  static List<int>? extractResponseBytes(
+    String? response,
+    String expectedHeader,
+  ) {
+    final data = _extractResponseData(response, expectedHeader);
+    if (data == null || data.isEmpty) return null;
+    final bytes = <int>[];
+    for (var i = 0; i + 1 < data.length; i += 2) {
+      bytes.add(int.parse(data.substring(i, i + 2), radix: 16));
+    }
+    return bytes.isEmpty ? null : bytes;
   }
 }

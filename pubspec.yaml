@@ -19,6 +19,12 @@ dependencies:
   http: ^1.2.2
   flutter_secure_storage: ^9.2.4
   syncfusion_flutter_gauges: ^32.2.4
+  pdf: ^3.11.0
+  path_provider: ^2.1.4
+  share_plus: ^10.0.0
+  hive_flutter: ^1.1.0
+  fl_chart: ^0.69.0
+  vibration: ^2.0.0
 
 dev_dependencies:
   flutter_test:

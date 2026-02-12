@@ -5,8 +5,15 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/language_provider.dart';
 import '../providers/obd2_provider.dart';
+import '../screens/chat_ai_screen.dart';
+import '../screens/draggy_screen.dart';
+import '../screens/drive_session_screen.dart';
+import '../screens/emissions_check_screen.dart';
+import '../screens/mileage_check_screen.dart';
 import '../screens/privacy_policy_screen.dart';
 import '../screens/log_viewer_screen.dart';
+import '../screens/sensor_explorer_screen.dart';
+import '../services/pdf_report_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/connection_card.dart';
 import '../widgets/vehicle_info_card.dart';
@@ -15,6 +22,8 @@ import '../widgets/live_parameters_card.dart';
 import '../widgets/radial_gauge_card.dart';
 import '../widgets/recommendations_card.dart';
 import '../widgets/device_picker_sheet.dart';
+import '../widgets/emissions_check_card.dart';
+import '../widgets/alert_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -154,50 +163,70 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFE8F0FE), Color(0xFFF8F9FE), Color(0xFFF3E8FD)],
+      body: SizedBox.expand(
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFE8F0FE), Color(0xFFF8F9FE), Color(0xFFF3E8FD)],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Consumer<Obd2Provider>(
-            builder: (context, provider, _) {
-              return CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(child: _buildAppBar()),
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        ConnectionCard(
-                          isConnected: provider.isConnected,
-                          isConnecting: provider.isConnecting,
-                          onConnect: () => _showDevicePicker(context),
-                          onDisconnect: () => provider.disconnect(),
-                        ),
-                        if (provider.isConnected) ...[
-                          VehicleInfoCard(
-                            vin: provider.vin,
-                            protocol: provider.protocol,
-                            ecuCount: provider.ecuCount,
-                            vehicleInfo: provider.vehicleInfo,
+          child: SafeArea(
+            child: Consumer<Obd2Provider>(
+              builder: (context, provider, _) {
+                return CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(child: _buildAppBar()),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+                          ConnectionCard(
+                            isConnected: provider.isConnected,
+                            isConnecting: provider.isConnecting,
+                            onConnect: () => _showDevicePicker(context),
+                            onDisconnect: () => provider.disconnect(),
                           ),
-                          _buildTabs(provider),
-                        ] else if (!provider.isConnecting) ...[
-                          if (provider.connectionError != null)
-                            _buildErrorBanner(provider.connectionError!),
-                          _buildDisconnectedState(),
-                        ],
-                        const SizedBox(height: 24),
-                      ]),
+                          if (provider.isConnected) ...[
+                            ...provider.activeAlerts.map(
+                              (alert) => AlertBanner(
+                                alert: alert,
+                                onDismiss: () =>
+                                    provider.dismissAlert(alert.config),
+                              ),
+                            ),
+                            VehicleInfoCard(
+                              vin: provider.vin,
+                              protocol: provider.protocol,
+                              ecuCount: provider.ecuCount,
+                              vehicleInfo: provider.vehicleInfo,
+                            ),
+                            EmissionsCheckCard(
+                              passes: provider.dtcCodes.isEmpty,
+                              dtcCount: provider.dtcCodes.length,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const EmissionsCheckScreen(),
+                                ),
+                              ),
+                            ),
+                            _buildFeatureTools(context, provider),
+                            _buildTabs(provider),
+                          ] else if (!provider.isConnecting) ...[
+                            if (provider.connectionError != null)
+                              _buildErrorBanner(provider.connectionError!),
+                            _buildDisconnectedState(),
+                          ],
+                          const SizedBox(height: 24),
+                        ]),
+                      ),
                     ),
-                  ),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -333,6 +362,156 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildFeatureTools(BuildContext context, Obd2Provider provider) {
+    final l = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10, top: 4),
+          child: Text(
+            l.featuresTitle,
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 88,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _featureTile(
+                icon: Icons.timer_rounded,
+                label: 'Draggy',
+                color: AppTheme.purple,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DraggyScreen()),
+                ),
+              ),
+              _featureTile(
+                icon: Icons.sensors_rounded,
+                label: l.sensorExplorerTitle,
+                color: AppTheme.cyan,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SensorExplorerScreen(),
+                  ),
+                ),
+              ),
+              _featureTile(
+                icon: Icons.speed_rounded,
+                label: l.mileageCheckTitle,
+                color: AppTheme.warning,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MileageCheckScreen()),
+                ),
+              ),
+              _featureTile(
+                icon: Icons.route_rounded,
+                label: l.driveSessionTitle,
+                color: AppTheme.success,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DriveSessionScreen()),
+                ),
+              ),
+              _featureTile(
+                icon: Icons.chat_rounded,
+                label: l.chatAiTitle,
+                color: AppTheme.primary,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ChatAiScreen()),
+                ),
+              ),
+              _featureTile(
+                icon: Icons.picture_as_pdf_rounded,
+                label: l.featureExportPdf,
+                color: AppTheme.error,
+                onTap: () => _exportPdf(context, provider),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _featureTile({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 90,
+        margin: const EdgeInsets.only(right: 10),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.15)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 24, color: color),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportPdf(BuildContext context, Obd2Provider provider) async {
+    final l = AppLocalizations.of(context);
+    try {
+      final file = await PdfReportService.generateReport(
+        vin: provider.vin,
+        protocol: provider.protocol,
+        ecuCount: provider.ecuCount,
+        parameters: provider.liveParams,
+        dtcCodes: provider.dtcCodes,
+        aiDiagnostic: provider.aiDiagnostic,
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${l.pdfExported}: ${file.path}'),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${l.pdfError}: $e'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+    }
   }
 
   Widget _buildTabs(Obd2Provider provider) {

@@ -310,6 +310,85 @@ class GeminiService {
     if ('6789'.contains(code)) return 'Oceanía/Sudamérica';
     return null;
   }
+
+  /// Multi-turn contextual chat with vehicle context injected.
+  Future<String> chat({
+    required List<Map<String, String>> history,
+    required String userMessage,
+    required String vehicleContext,
+  }) async {
+    final contents = <Map<String, dynamic>>[];
+
+    // System context as first user message
+    contents.add({
+      'role': 'user',
+      'parts': [
+        {
+          'text':
+              'Eres un mecánico automotriz experto. Responde siempre en español. '
+              'Contexto del vehículo conectado:\n$vehicleContext\n\n'
+              'Responde de forma clara y concisa.',
+        },
+      ],
+    });
+    contents.add({
+      'role': 'model',
+      'parts': [
+        {'text': 'Entendido. Estoy listo para ayudarte con tu vehículo.'},
+      ],
+    });
+
+    // Previous conversation history
+    for (final msg in history) {
+      contents.add({
+        'role': msg['role'] == 'user' ? 'user' : 'model',
+        'parts': [
+          {'text': msg['text']},
+        ],
+      });
+    }
+
+    // Current user message
+    contents.add({
+      'role': 'user',
+      'parts': [
+        {'text': userMessage},
+      ],
+    });
+
+    final url = Uri.parse(
+      '$_baseUrl/models/$model:generateContent?key=$apiKey',
+    );
+
+    final body = jsonEncode({
+      'contents': contents,
+      'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 1024},
+    });
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    );
+
+    if (response.statusCode != 200) {
+      throw GeminiException(
+        'Error en la API de Gemini (${response.statusCode})',
+      );
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final candidates = json['candidates'] as List<dynamic>?;
+    if (candidates == null || candidates.isEmpty) {
+      throw GeminiException('Gemini no generó respuesta.');
+    }
+    final content = candidates[0]['content'] as Map<String, dynamic>?;
+    final parts = content?['parts'] as List<dynamic>?;
+    if (parts == null || parts.isEmpty) {
+      throw GeminiException('Respuesta de Gemini vacía.');
+    }
+    return parts[0]['text'] as String;
+  }
 }
 
 class GeminiException implements Exception {

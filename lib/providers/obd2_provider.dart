@@ -9,6 +9,7 @@ import '../models/dtc_code.dart';
 import '../models/vehicle_parameter.dart';
 import '../models/recommendation.dart';
 import '../models/ai_diagnostic.dart';
+import '../models/alert_config.dart';
 import '../models/vehicle_info.dart';
 import '../services/gemini_service.dart';
 import '../services/secure_storage_service.dart';
@@ -42,6 +43,16 @@ class Obd2Provider extends ChangeNotifier {
   bool isClearing = false;
   bool useMockData = false;
   String? connectionError;
+
+  // ── Real-time Alerts ─────────────────────────────────────
+  List<AlertConfig> alertConfigs = [
+    const AlertConfig(
+      parameterKey: 'engine_temp',
+      threshold: 105,
+      condition: AlertCondition.above,
+    ),
+  ];
+  List<ActiveAlert> activeAlerts = [];
 
   // ── Gemini AI ────────────────────────────────────────────
   GeminiService? _geminiService;
@@ -131,6 +142,12 @@ class Obd2Provider extends ChangeNotifier {
     ConnectionMode.wifi => _wifiService,
     null => null,
   };
+
+  /// Public accessor for screens that need direct service access (e.g. mileage check).
+  Obd2BaseService? get activeService => _activeService;
+
+  /// Public accessor for the Gemini service (used by chat screen).
+  GeminiService? get geminiService => _geminiService;
 
   /// Llamado cuando el servicio WiFi detecta una desconexión inesperada.
   void _onServiceDisconnected() {
@@ -444,6 +461,7 @@ class Obd2Provider extends ChangeNotifier {
     vehicleInfo = const VehicleInfo();
     aiDiagnostic = null;
     aiDiagnosticError = null;
+    activeAlerts = [];
     _initDefaultParams();
     notifyListeners();
   }
@@ -591,6 +609,7 @@ class Obd2Provider extends ChangeNotifier {
             )
           : liveParams[5],
     ];
+    _checkAlerts();
     notifyListeners();
   }
 
@@ -635,6 +654,42 @@ class Obd2Provider extends ChangeNotifier {
       ];
       notifyListeners();
     });
+  }
+
+  // ── Real-time Alert Checking ─────────────────────────────
+
+  void _checkAlerts() {
+    final newAlerts = <ActiveAlert>[];
+    for (final config in alertConfigs) {
+      if (!config.enabled) continue;
+      final param = liveParams.where((p) => p.label == config.parameterKey);
+      if (param.isEmpty) continue;
+      final value = double.tryParse(param.first.value);
+      if (value == null) continue;
+
+      final triggered = switch (config.condition) {
+        AlertCondition.above => value > config.threshold,
+        AlertCondition.below => value < config.threshold,
+      };
+
+      if (triggered) {
+        newAlerts.add(
+          ActiveAlert(
+            config: config,
+            currentValue: value,
+            triggeredAt: DateTime.now(),
+          ),
+        );
+      }
+    }
+    activeAlerts = newAlerts;
+  }
+
+  void dismissAlert(AlertConfig config) {
+    activeAlerts = activeAlerts
+        .where((a) => a.config.parameterKey != config.parameterKey)
+        .toList();
+    notifyListeners();
   }
 
   // ── Recomendaciones AI ─────────────────────────────────────

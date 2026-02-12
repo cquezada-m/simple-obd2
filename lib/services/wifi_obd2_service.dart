@@ -823,6 +823,21 @@ class WifiObd2Service implements Obd2BaseService {
   }
 
   @override
+  Future<String?> sendRawCommand(String command) => _sendCommand(command);
+
+  @override
+  Future<List<int>?> queryPid(String pid) async {
+    final response = await _sendCommand(_pidCommand(pid));
+    if (isErrorResponse(response)) return null;
+    // Expected header: mode+0x40 followed by PID bytes
+    // e.g. PID '010C' → header '410C'
+    final pidHex = pid.length >= 4 ? pid.substring(2) : pid;
+    final header = '41$pidHex'.toUpperCase();
+    final data = Obd2BaseService.extractResponseBytes(response, header);
+    return data;
+  }
+
+  @override
   void dispose() {
     disconnect();
   }

@@ -298,6 +298,118 @@ class AppLocalizations {
   String get cancel => _t('Cancelar', 'Cancel');
   String get confirm => _t('Confirmar', 'Confirm');
 
+  // ── Draggy ──
+  String get draggyTitle => _t('Draggy', 'Draggy');
+  String get draggySelectTest =>
+      _t('Selecciona el tipo de prueba', 'Select test type');
+  String get draggyStart => _t('Iniciar', 'Start');
+  String get draggyReady =>
+      _t('Listo — Acelera cuando quieras', 'Ready — Accelerate when ready');
+  String get draggyMustStop =>
+      _t('Detén el vehículo para iniciar', 'Stop the vehicle to start');
+  String get draggyResults => _t('Resultados', 'Results');
+  String get draggyTrapSpeed => _t('Vel. trampa', 'Trap speed');
+  String get draggyMaxRpm => _t('RPM máx', 'Max RPM');
+  String get draggyTempStart => _t('Temp. inicio', 'Start temp');
+  String get draggyTempEnd => _t('Temp. fin', 'End temp');
+  String get draggyChart =>
+      _t('Velocidad y RPM vs Tiempo', 'Speed & RPM vs Time');
+
+  // ── Sensor Explorer ──
+  String get sensorExplorerTitle =>
+      _t('Explorador de Sensores', 'Sensor Explorer');
+  String get sensorSearch => _t('Buscar sensor...', 'Search sensor...');
+  String get sensorAvailable => _t('sensores disponibles', 'sensors available');
+  String get sensorCatEngine => _t('Motor', 'Engine');
+  String get sensorCatFuel => _t('Combustible', 'Fuel');
+  String get sensorCatAir => _t('Aire', 'Air');
+  String get sensorCatEmissions => _t('Emisiones', 'Emissions');
+  String get sensorCatElectrical => _t('Eléctrico', 'Electrical');
+  String get sensorCatDiagnostic => _t('Diagnóstico', 'Diagnostic');
+  String get sensorMin => _t('Mín', 'Min');
+  String get sensorMax => _t('Máx', 'Max');
+  String get sensorAvg => _t('Prom', 'Avg');
+  String get sensorNoData => _t('Sin datos aún', 'No data yet');
+  String get sensorHistory => _t('Historial', 'History');
+  String get sensorInfo => _t('Información del sensor', 'Sensor information');
+  String get sensorUnit => _t('Unidad', 'Unit');
+  String get sensorCategory => _t('Categoría', 'Category');
+  String get sensorNormalMax => _t('Máx. normal', 'Normal max');
+  String get sensorWarningMax => _t('Máx. advertencia', 'Warning max');
+
+  // ── Mileage Check ──
+  String get mileageCheckTitle =>
+      _t('Verificación de Kilometraje', 'Mileage Verification');
+  String get mileageCheckDesc => _t(
+    'Compara el kilometraje almacenado en múltiples módulos del vehículo para detectar posibles manipulaciones.',
+    'Compare mileage stored in multiple vehicle modules to detect possible tampering.',
+  );
+  String get mileageCheckBasic => _t('Básica', 'Basic');
+  String get mileageCheckFull => _t('Completa', 'Full');
+  String get mileageDisclaimer => _t(
+    'Resultado indicativo. Consulte un profesional para verificación legal.',
+    'Indicative result. Consult a professional for legal verification.',
+  );
+
+  // ── Chat AI ──
+  String get chatAiTitle => _t('Chat AI', 'AI Chat');
+  String get chatAiHint => _t(
+    'Pregunta lo que quieras sobre tu vehículo',
+    'Ask anything about your vehicle',
+  );
+  String get chatAiPlaceholder =>
+      _t('Escribe tu pregunta...', 'Type your question...');
+
+  // ── Emissions ──
+  String get emissionsTitle =>
+      _t('Pre-verificación Emisiones', 'Emissions Pre-check');
+  String get emissionsPasses => _t('APROBADO', 'PASS');
+  String get emissionsFails => _t('NO APROBADO', 'FAIL');
+  String get emissionsPassDesc => _t(
+    'No se detectaron códigos de falla activos. Tu vehículo debería pasar la verificación de emisiones.',
+    'No active fault codes detected. Your vehicle should pass the emissions check.',
+  );
+  String get emissionsFailDesc => _t(
+    'Se detectaron códigos de falla activos que podrían impedir la verificación de emisiones.',
+    'Active fault codes detected that could prevent passing the emissions check.',
+  );
+  String get emissionsBlockingCodes =>
+      _t('Códigos que impiden verificación', 'Codes blocking verification');
+  String get emissionsDisclaimer => _t(
+    'Resultado indicativo basado en DTCs activos. El resultado real puede variar según la normativa local.',
+    'Indicative result based on active DTCs. Actual result may vary based on local regulations.',
+  );
+
+  // ── Drive Session ──
+  String get driveSessionTitle => _t('Modo Viaje', 'Drive Mode');
+  String get driveSessionStart => _t('Iniciar grabación', 'Start recording');
+  String get driveSessionStop => _t('Detener', 'Stop');
+  String get driveSessionDuration => _t('Duración', 'Duration');
+  String get driveSessionAvgSpeed => _t('Vel. promedio', 'Avg speed');
+  String get driveSessionMaxSpeed => _t('Vel. máxima', 'Max speed');
+  String get driveSessionEvents => _t('Eventos', 'Events');
+  String get driveSessionHardAccel =>
+      _t('Aceleración brusca', 'Hard acceleration');
+  String get driveSessionHardBrake => _t('Frenado brusco', 'Hard braking');
+  String get driveSessionHighRpm => _t('RPM alto', 'High RPM');
+  String get driveSessionRecording => _t('Grabando...', 'Recording...');
+
+  // ── Home Feature Cards ──
+  String get featuresTitle => _t('Herramientas', 'Tools');
+  String get featureExportPdf => _t('Exportar PDF', 'Export PDF');
+  String get featureExportPdfDesc =>
+      _t('Genera un reporte diagnóstico', 'Generate a diagnostic report');
+  String get pdfExported => _t('Reporte PDF generado', 'PDF report generated');
+  String get pdfError => _t('Error al generar PDF', 'Error generating PDF');
+
+  // ── Demo Mode ──
+  String get chatAiDemoReply => _t(
+    'Modo demostración: Esta es una respuesta simulada. Configura tu API key de Gemini para obtener diagnósticos reales con inteligencia artificial.',
+    'Demo mode: This is a simulated response. Configure your Gemini API key to get real AI-powered diagnostics.',
+  );
+  String get draggyDemoRunning =>
+      _t('Simulando prueba de demo...', 'Simulating demo test...');
+
   String _t(String es, String en) => language == AppLanguage.es ? es : en;
 }
 
