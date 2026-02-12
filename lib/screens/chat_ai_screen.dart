@@ -7,6 +7,7 @@ import '../models/chat_message.dart';
 import '../providers/obd2_provider.dart';
 import '../services/gemini_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/typing_indicator.dart';
 
 class ChatAiScreen extends StatefulWidget {
   const ChatAiScreen({super.key});
@@ -229,9 +230,9 @@ class _ChatAiScreenState extends State<ChatAiScreen> {
                       ),
               ),
               if (_isLoading)
-                const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TypingIndicator(label: l.chatAiTyping),
                 ),
               _buildInput(l),
             ],

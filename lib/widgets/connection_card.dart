@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 class ConnectionCard extends StatelessWidget {
   final bool isConnected;
   final bool isConnecting;
+  final String? connectionMode; // 'bluetooth', 'wifi', or 'mock'
   final VoidCallback onConnect;
   final VoidCallback onDisconnect;
 
@@ -13,6 +14,7 @@ class ConnectionCard extends StatelessWidget {
     super.key,
     required this.isConnected,
     required this.isConnecting,
+    this.connectionMode,
     required this.onConnect,
     required this.onDisconnect,
   });
@@ -47,15 +49,23 @@ class ConnectionCard extends StatelessWidget {
                     Row(
                       children: [
                         if (isConnected) ...[
-                          const Icon(
-                            Icons.wifi_rounded,
+                          Icon(
+                            connectionMode == 'wifi'
+                                ? Icons.wifi_rounded
+                                : connectionMode == 'mock'
+                                ? Icons.science_outlined
+                                : Icons.bluetooth_rounded,
                             size: 13,
                             color: AppTheme.textSecondary,
                           ),
                           const SizedBox(width: 4),
                         ],
                         Text(
-                          isConnected ? 'OBD2 ELM327' : l.obd2Device,
+                          isConnected
+                              ? connectionMode == 'mock'
+                                    ? 'Demo'
+                                    : 'OBD2 ELM327 (${connectionMode == 'wifi' ? 'WiFi' : 'BT'})'
+                              : l.obd2Device,
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: AppTheme.textSecondary,
@@ -67,19 +77,27 @@ class ConnectionCard extends StatelessWidget {
                 ),
               ),
               if (isConnected)
-                OutlinedButton(
-                  onPressed: onDisconnect,
-                  child: Text(
-                    l.disconnect,
-                    style: GoogleFonts.inter(fontSize: 13),
+                Semantics(
+                  label: 'Disconnect OBD2',
+                  button: true,
+                  child: OutlinedButton(
+                    onPressed: onDisconnect,
+                    child: Text(
+                      l.disconnect,
+                      style: GoogleFonts.inter(fontSize: 13),
+                    ),
                   ),
                 )
               else
-                ElevatedButton(
-                  onPressed: isConnecting ? null : onConnect,
-                  child: Text(
-                    isConnecting ? l.connecting : l.connect,
-                    style: GoogleFonts.inter(fontSize: 14),
+                Semantics(
+                  label: 'Connect OBD2',
+                  button: true,
+                  child: ElevatedButton(
+                    onPressed: isConnecting ? null : onConnect,
+                    child: Text(
+                      isConnecting ? l.connecting : l.connect,
+                      style: GoogleFonts.inter(fontSize: 14),
+                    ),
                   ),
                 ),
             ],
@@ -123,18 +141,26 @@ class ConnectionCard extends StatelessWidget {
     final Color bgColor;
     final Color iconColor;
     final String statusLabel;
+    final IconData icon;
     if (isConnected) {
       bgColor = AppTheme.success.withValues(alpha: 0.12);
       iconColor = AppTheme.success;
       statusLabel = 'Connected';
+      icon = switch (connectionMode) {
+        'wifi' => Icons.wifi_rounded,
+        'mock' => Icons.science_rounded,
+        _ => Icons.bluetooth_connected_rounded,
+      };
     } else if (isConnecting) {
       bgColor = AppTheme.primary.withValues(alpha: 0.12);
       iconColor = AppTheme.primary;
       statusLabel = 'Connecting';
+      icon = Icons.bluetooth_searching_rounded;
     } else {
       bgColor = AppTheme.textTertiary.withValues(alpha: 0.12);
       iconColor = AppTheme.textTertiary;
       statusLabel = 'Disconnected';
+      icon = Icons.bluetooth_rounded;
     }
 
     return Semantics(
@@ -145,7 +171,7 @@ class ConnectionCard extends StatelessWidget {
           color: bgColor,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Icon(Icons.bluetooth_rounded, size: 22, color: iconColor),
+        child: Icon(icon, size: 22, color: iconColor),
       ),
     );
   }

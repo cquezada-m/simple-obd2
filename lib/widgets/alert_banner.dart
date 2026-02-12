@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../l10n/app_localizations.dart';
 import '../models/alert_config.dart';
 import '../theme/app_theme.dart';
 
@@ -10,8 +11,25 @@ class AlertBanner extends StatelessWidget {
 
   const AlertBanner({super.key, required this.alert, this.onDismiss});
 
+  String _readableParamName(String key, AppLocalizations l) {
+    return switch (key) {
+      'rpm' => l.paramRpm,
+      'speed' => l.paramSpeed,
+      'engine_temp' => l.paramEngineTemp,
+      'engine_load' => l.paramEngineLoad,
+      'intake_pressure' => l.paramIntakePressure,
+      'fuel_level' => l.paramFuelLevel,
+      _ => key,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final paramName = _readableParamName(alert.config.parameterKey, l);
+    final condition = alert.config.condition == AlertCondition.above
+        ? '▲'
+        : '▼';
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -30,7 +48,7 @@ class AlertBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              '${alert.config.parameterKey}: ${alert.currentValue.toStringAsFixed(0)}',
+              '$condition $paramName: ${alert.currentValue.toStringAsFixed(0)} (${l.alertThreshold} ${alert.config.threshold.toStringAsFixed(0)})',
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,

@@ -410,6 +410,23 @@ class AppLocalizations {
   String get draggyDemoRunning =>
       _t('Simulando prueba de demo...', 'Simulating demo test...');
 
+  // ── UX Feedback ──
+  String get disconnectConfirmTitle =>
+      _t('¿Desconectar dispositivo?', 'Disconnect device?');
+  String get disconnectConfirmMsg => _t(
+    'Se detendrá la lectura de datos en tiempo real del vehículo.',
+    'Real-time vehicle data reading will stop.',
+  );
+  String get connectedSuccess =>
+      _t('Conectado al dispositivo OBD2', 'Connected to OBD2 device');
+  String get codesCleared =>
+      _t('Códigos borrados correctamente', 'Codes cleared successfully');
+  String get chatAiTyping => _t('Analizando...', 'Analyzing...');
+
+  // ── UX Hints ──
+  String get swipeHint => _t('Desliza', 'Swipe');
+  String get alertThreshold => _t('límite', 'limit');
+
   String _t(String es, String en) => language == AppLanguage.es ? es : en;
 }
 

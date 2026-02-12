@@ -4,6 +4,7 @@ import 'package:syncfusion_flutter_gauges/gauges.dart';
 import '../l10n/app_localizations.dart';
 import '../models/vehicle_parameter.dart';
 import '../theme/app_theme.dart';
+import '../widgets/pulsing_dot.dart';
 
 /// Displays RPM and Speed as analog radial gauges inside a GlassCard.
 class RadialGaugeCard extends StatelessWidget {
@@ -38,14 +39,7 @@ class RadialGaugeCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: AppTheme.success,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
+                    const PulsingDot(color: AppTheme.success),
                     const SizedBox(width: 5),
                     Text(
                       l.live,

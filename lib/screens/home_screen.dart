@@ -15,6 +15,7 @@ import '../screens/log_viewer_screen.dart';
 import '../screens/sensor_explorer_screen.dart';
 import '../services/pdf_report_service.dart';
 import '../theme/app_theme.dart';
+import '../theme/page_transitions.dart';
 import '../widgets/connection_card.dart';
 import '../widgets/vehicle_info_card.dart';
 import '../widgets/diagnostic_codes_card.dart';
@@ -159,6 +160,51 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  Future<void> _confirmDisconnect(BuildContext context) async {
+    final l = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          l.disconnectConfirmTitle,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
+        ),
+        content: Text(
+          l.disconnectConfirmMsg,
+          style: GoogleFonts.inter(fontSize: 14, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.disconnect),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      context.read<Obd2Provider>().disconnect();
+    }
+  }
+
+  void _clearCodesWithFeedback(BuildContext context) async {
+    final provider = context.read<Obd2Provider>();
+    await provider.clearCodes();
+    if (!context.mounted) return;
+    final l = AppLocalizations.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l.codesCleared),
+        backgroundColor: AppTheme.success,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -185,8 +231,11 @@ class _HomeScreenState extends State<HomeScreen>
                           ConnectionCard(
                             isConnected: provider.isConnected,
                             isConnecting: provider.isConnecting,
+                            connectionMode: provider.useMockData
+                                ? 'mock'
+                                : provider.activeMode?.name,
                             onConnect: () => _showDevicePicker(context),
-                            onDisconnect: () => provider.disconnect(),
+                            onDisconnect: () => _confirmDisconnect(context),
                           ),
                           if (provider.isConnected) ...[
                             ...provider.activeAlerts.map(
@@ -207,8 +256,8 @@ class _HomeScreenState extends State<HomeScreen>
                               dtcCount: provider.dtcCodes.length,
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (_) => const EmissionsCheckScreen(),
+                                SlideFadeRoute(
+                                  page: const EmissionsCheckScreen(),
                                 ),
                               ),
                             ),
@@ -276,53 +325,75 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           _buildLanguageToggle(),
           const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const LogViewerScreen()),
-            ),
-            child: Semantics(
-              label: 'Logs',
-              button: true,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.purple.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.terminal_rounded,
-                  size: 18,
-                  color: AppTheme.purple,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
-            ),
-            child: Semantics(
-              label: AppLocalizations.of(context).privacyPolicyLink,
-              button: true,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.shield_outlined,
-                  size: 18,
-                  color: AppTheme.primary,
-                ),
-              ),
-            ),
-          ),
+          _buildAppBarMenu(l),
         ],
       ),
+    );
+  }
+
+  Widget _buildAppBarMenu(AppLocalizations l) {
+    return PopupMenuButton<String>(
+      icon: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppTheme.textTertiary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(
+          Icons.more_vert_rounded,
+          size: 18,
+          color: AppTheme.textSecondary,
+        ),
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      offset: const Offset(0, 44),
+      onSelected: (value) {
+        switch (value) {
+          case 'logs':
+            Navigator.push(
+              context,
+              SlideFadeRoute(page: const LogViewerScreen()),
+            );
+          case 'privacy':
+            Navigator.push(
+              context,
+              SlideFadeRoute(page: const PrivacyPolicyScreen()),
+            );
+        }
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          value: 'logs',
+          child: Row(
+            children: [
+              const Icon(
+                Icons.terminal_rounded,
+                size: 18,
+                color: AppTheme.purple,
+              ),
+              const SizedBox(width: 10),
+              Text(l.logsTitle, style: GoogleFonts.inter(fontSize: 13)),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'privacy',
+          child: Row(
+            children: [
+              const Icon(
+                Icons.shield_outlined,
+                size: 18,
+                color: AppTheme.primary,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                l.privacyPolicyTitle,
+                style: GoogleFonts.inter(fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -366,79 +437,101 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildFeatureTools(BuildContext context, Obd2Provider provider) {
     final l = AppLocalizations.of(context);
+    final tools = [
+      _FeatureItem(
+        Icons.timer_rounded,
+        'Draggy',
+        AppTheme.purple,
+        () =>
+            Navigator.push(context, SlideFadeRoute(page: const DraggyScreen())),
+      ),
+      _FeatureItem(
+        Icons.sensors_rounded,
+        l.sensorExplorerTitle,
+        AppTheme.cyan,
+        () => Navigator.push(
+          context,
+          SlideFadeRoute(page: const SensorExplorerScreen()),
+        ),
+      ),
+      _FeatureItem(
+        Icons.speed_rounded,
+        l.mileageCheckTitle,
+        AppTheme.warning,
+        () => Navigator.push(
+          context,
+          SlideFadeRoute(page: const MileageCheckScreen()),
+        ),
+      ),
+      _FeatureItem(
+        Icons.route_rounded,
+        l.driveSessionTitle,
+        AppTheme.success,
+        () => Navigator.push(
+          context,
+          SlideFadeRoute(page: const DriveSessionScreen()),
+        ),
+      ),
+      _FeatureItem(
+        Icons.chat_rounded,
+        l.chatAiTitle,
+        AppTheme.primary,
+        () =>
+            Navigator.push(context, SlideFadeRoute(page: const ChatAiScreen())),
+      ),
+      _FeatureItem(
+        Icons.picture_as_pdf_rounded,
+        l.featureExportPdf,
+        AppTheme.error,
+        () => _exportPdf(context, provider),
+      ),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 10, top: 4),
-          child: Text(
-            l.featuresTitle,
-            style: GoogleFonts.inter(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary,
-            ),
+          child: Row(
+            children: [
+              Text(
+                l.featuresTitle,
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              Icon(
+                Icons.swipe_rounded,
+                size: 14,
+                color: AppTheme.textTertiary.withValues(alpha: 0.5),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                l.swipeHint,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: AppTheme.textTertiary,
+                ),
+              ),
+            ],
           ),
         ),
         SizedBox(
-          height: 88,
-          child: ListView(
+          height: 92,
+          child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            children: [
-              _featureTile(
-                icon: Icons.timer_rounded,
-                label: 'Draggy',
-                color: AppTheme.purple,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DraggyScreen()),
-                ),
-              ),
-              _featureTile(
-                icon: Icons.sensors_rounded,
-                label: l.sensorExplorerTitle,
-                color: AppTheme.cyan,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const SensorExplorerScreen(),
-                  ),
-                ),
-              ),
-              _featureTile(
-                icon: Icons.speed_rounded,
-                label: l.mileageCheckTitle,
-                color: AppTheme.warning,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MileageCheckScreen()),
-                ),
-              ),
-              _featureTile(
-                icon: Icons.route_rounded,
-                label: l.driveSessionTitle,
-                color: AppTheme.success,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DriveSessionScreen()),
-                ),
-              ),
-              _featureTile(
-                icon: Icons.chat_rounded,
-                label: l.chatAiTitle,
-                color: AppTheme.primary,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ChatAiScreen()),
-                ),
-              ),
-              _featureTile(
-                icon: Icons.picture_as_pdf_rounded,
-                label: l.featureExportPdf,
-                color: AppTheme.error,
-                onTap: () => _exportPdf(context, provider),
-              ),
-            ],
+            itemCount: tools.length,
+            itemBuilder: (context, index) {
+              final t = tools[index];
+              return _featureTile(
+                icon: t.icon,
+                label: t.label,
+                color: t.color,
+                onTap: t.onTap,
+              );
+            },
           ),
         ),
         const SizedBox(height: 8),
@@ -452,34 +545,46 @@ class _HomeScreenState extends State<HomeScreen>
     required Color color,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 90,
-        margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.15)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 24, color: color),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textPrimary,
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: Semantics(
+        label: label,
+        button: true,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            splashColor: color.withValues(alpha: 0.15),
+            highlightColor: color.withValues(alpha: 0.08),
+            child: Ink(
+              width: 100,
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: color.withValues(alpha: 0.15)),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 26, color: color),
+                  const SizedBox(height: 8),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -590,83 +695,58 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ),
             ],
+            onTap: (_) => setState(() {}),
           ),
         ),
-        SizedBox(
-          height: _calculateTabHeight(provider),
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              SingleChildScrollView(
-                physics: const NeverScrollableScrollPhysics(),
-                child: Column(
-                  children: [
-                    DiagnosticCodesCard(
-                      codes: provider.dtcCodes,
-                      onClearCodes: () => provider.clearCodes(),
-                      isClearing: provider.isClearing,
-                    ),
-                    AiRecommendationsCard(
-                      recommendations: provider.getRecommendations(
-                        locale: l.locale,
-                      ),
-                    ),
-                  ],
+        // Render only the active tab content inline (no fixed height)
+        IndexedStack(
+          index: _tabController.index,
+          children: [
+            Column(
+              children: [
+                DiagnosticCodesCard(
+                  codes: provider.dtcCodes,
+                  onClearCodes: () => _clearCodesWithFeedback(context),
+                  isClearing: provider.isClearing,
                 ),
-              ),
-              SingleChildScrollView(
-                physics: const NeverScrollableScrollPhysics(),
-                child: Column(
-                  children: [
-                    RadialGaugeCard(
-                      rpm: provider.liveParams[0],
-                      speed: provider.liveParams[1],
-                    ),
-                    LiveParametersCard(parameters: provider.liveParams),
-                    AiRecommendationsCard(
-                      recommendations: provider.getRecommendations(
-                        locale: l.locale,
-                      ),
-                    ),
-                  ],
+                AiRecommendationsCard(
+                  recommendations: provider.getRecommendations(
+                    locale: l.locale,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+            Column(
+              children: [
+                RadialGaugeCard(
+                  rpm: provider.liveParams[0],
+                  speed: provider.liveParams[1],
+                ),
+                LiveParametersCard(parameters: provider.liveParams),
+              ],
+            ),
+          ],
         ),
       ],
     );
   }
 
-  double _calculateTabHeight(Obd2Provider provider) {
-    final locale = AppLocalizations.of(context).locale;
-    final dtcHeight = provider.dtcCodes.isEmpty
-        ? 250.0
-        : (provider.dtcCodes.length * 100.0 + 120);
-    final recHeight =
-        provider.getRecommendations(locale: locale).length * 280.0 + 160;
-    final liveHeight = 640.0; // gauges (~220) + remaining params + padding
-    final diagTab = dtcHeight + recHeight;
-    final liveTab = liveHeight + recHeight;
-    return (diagTab > liveTab ? diagTab : liveTab) + 40;
-  }
-
   Widget _buildDisconnectedState() {
     final l = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 60),
+      padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
         children: [
           Container(
-            width: 88,
-            height: 88,
+            width: 96,
+            height: 96,
             decoration: BoxDecoration(
               color: AppTheme.primary.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.directions_car_rounded,
-              size: 40,
+              Icons.cable_rounded,
+              size: 42,
               color: AppTheme.textTertiary,
             ),
           ),
@@ -674,14 +754,14 @@ class _HomeScreenState extends State<HomeScreen>
           Text(
             l.connectObd2,
             style: GoogleFonts.inter(
-              fontWeight: FontWeight.w500,
-              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              fontSize: 17,
               color: AppTheme.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 48),
+            padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
               l.connectObd2Hint,
               textAlign: TextAlign.center,
@@ -690,6 +770,21 @@ class _HomeScreenState extends State<HomeScreen>
                 color: AppTheme.textSecondary,
                 height: 1.5,
               ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () => _showDevicePicker(context),
+            icon: const Icon(Icons.bluetooth_searching_rounded, size: 18),
+            label: Text(
+              l.connect,
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
             ),
           ),
         ],
@@ -729,4 +824,12 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
   }
+}
+
+class _FeatureItem {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _FeatureItem(this.icon, this.label, this.color, this.onTap);
 }

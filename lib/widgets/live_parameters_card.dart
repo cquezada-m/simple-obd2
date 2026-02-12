@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../l10n/app_localizations.dart';
 import '../models/vehicle_parameter.dart';
 import '../theme/app_theme.dart';
+import 'animated_value_text.dart';
+import 'pulsing_dot.dart';
 
 class LiveParametersCard extends StatelessWidget {
   final List<VehicleParameter> parameters;
@@ -58,14 +60,7 @@ class LiveParametersCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: AppTheme.success,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
+                    const PulsingDot(color: AppTheme.success),
                     const SizedBox(width: 5),
                     Text(
                       l.live,
@@ -84,11 +79,13 @@ class LiveParametersCard extends StatelessWidget {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
-              childAspectRatio: 1.35,
+              childAspectRatio: MediaQuery.of(context).size.width > 400
+                  ? 1.35
+                  : 1.2,
             ),
             itemCount: filtered.length,
             itemBuilder: (context, index) {
@@ -129,8 +126,8 @@ class LiveParametersCard extends StatelessWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(
-                            p.value,
+                          AnimatedValueText(
+                            value: p.value,
                             style: GoogleFonts.inter(
                               fontSize: 26,
                               fontWeight: FontWeight.w600,
@@ -152,18 +149,25 @@ class LiveParametersCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: p.percentage / 100,
-                          minHeight: 4,
-                          backgroundColor: AppTheme.textTertiary.withValues(
-                            alpha: 0.12,
-                          ),
-                          valueColor: AlwaysStoppedAnimation(
-                            _progressColor(p.percentage),
-                          ),
-                        ),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween<double>(end: p.percentage / 100),
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, animated, _) {
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: animated,
+                              minHeight: 4,
+                              backgroundColor: AppTheme.textTertiary.withValues(
+                                alpha: 0.12,
+                              ),
+                              valueColor: AlwaysStoppedAnimation(
+                                _progressColor(p.percentage),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
