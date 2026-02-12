@@ -53,6 +53,12 @@ app.*.map.json
 # Reference UI / design files (not part of Flutter app)
 /ui/
 
+# Documentation / internal notes
+/docs/
+
+# Kiro specs
+.kiro/specs/
+
 # macOS generated
 *.orig
 

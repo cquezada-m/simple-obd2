@@ -25,16 +25,17 @@ abstract class Obd2BaseService {
   /// Extracts the data portion from an OBD2 response.
   /// Handles multi-line responses, echoed commands, and various ELM327 quirks.
   /// Returns only the hex data bytes after the mode+PID header.
+  ///
+  /// For multi-ECU vehicles (BMW, etc.), multiple lines may contain the same
+  /// header (e.g., two "410C" lines from two ECUs). We use the FIRST valid match.
   static String? _extractResponseData(String? response, String expectedHeader) {
     if (response == null || response.isEmpty || response.contains('NO DATA')) {
       return null;
     }
 
     // Rechazar respuestas que son puramente errores ELM327
-    final upper = response.toUpperCase();
-    if (upper.trim() == 'STOPPED' ||
-        upper.trim() == '?' ||
-        upper.startsWith('ERROR')) {
+    final upper = response.toUpperCase().trim();
+    if (upper == 'STOPPED' || upper == '?' || upper.startsWith('ERROR')) {
       return null;
     }
 
@@ -44,30 +45,39 @@ abstract class Obd2BaseService {
         .where(
           (l) =>
               l.isNotEmpty &&
-              !l.startsWith('SEARCHING') &&
-              !l.startsWith('AT') &&
+              !l.toUpperCase().startsWith('SEARCHING') &&
+              !l.toUpperCase().startsWith('AT') &&
               !l.toUpperCase().startsWith('STOPPED') &&
+              !l.toUpperCase().startsWith('ERROR') &&
               l != '?',
         )
         .toList();
 
     for (final line in lines) {
-      // Saltar líneas que son negative response (7F xx xx)
       final lineHex = line
           .replaceAll(RegExp(r'[^0-9A-Fa-f]'), '')
           .toUpperCase();
+
+      // Saltar líneas que son negative response (7F xx xx)
       if (RegExp(r'^7F[0-9A-F]{4}').hasMatch(lineHex)) continue;
 
-      final hex = line.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
-      // Look for the expected response header (e.g., "410C" for RPM)
-      final idx = hex.toUpperCase().indexOf(expectedHeader.toUpperCase());
-      if (idx >= 0) {
-        return hex.substring(idx + expectedHeader.length);
+      // Saltar líneas demasiado cortas para contener header + data
+      if (lineHex.length < expectedHeader.length + 2) continue;
+
+      // Buscar el header esperado. Solo aceptar si la línea COMIENZA con
+      // el header (opcionalmente precedido por dirección CAN de 3 hex chars).
+      // Esto evita falsos positivos donde "410C" aparece dentro de datos
+      // de otro PID.
+      final headerUpper = expectedHeader.toUpperCase();
+      final idx = lineHex.indexOf(headerUpper);
+      if (idx >= 0 && idx <= 3) {
+        // idx 0 = header directo (ej: "410C0A7A")
+        // idx 3 = con dirección CAN (ej: "7E8410C0A7A")
+        return lineHex.substring(idx + headerUpper.length);
       }
     }
 
     // NO fallback — si no encontramos el header esperado, no adivinamos.
-    // El fallback anterior causaba que "STOPPED7F1022" se parseara como datos válidos.
     return null;
   }
 

@@ -18,6 +18,12 @@ class Obd2Service implements Obd2BaseService {
   bool get isConnected => _connection != null && _connection!.isConnected;
   BluetoothDevice? get connectedDevice => _connectedDevice;
 
+  /// true si el protocolo detectado es CAN (ISO 15765-4).
+  bool _isCan = false;
+
+  /// Dirección CAN de la ECU primaria del motor.
+  String? _primaryEcuAddress;
+
   static final _log = AppLogger.instance;
 
   Future<List<BluetoothDevice>> getPairedDevices() async {
@@ -72,12 +78,74 @@ class Obd2Service implements Obd2BaseService {
     await _sendCommand('ATS0'); // Spaces off
     await _sendCommand('ATH0'); // Headers off
     await _sendCommand('ATSP0'); // Auto protocol
-    _log.log(LogCategory.connection, 'BT: ELM327 initialized');
+
+    // Forzar detección de protocolo
+    await _sendCommand('0100');
+
+    // Detectar protocolo y configurar filtrado CAN
+    await _detectAndConfigureProtocol();
+
+    _log.log(LogCategory.connection, 'BT: ELM327 initialized (CAN=$_isCan)');
+  }
+
+  /// Detecta protocolo y configura filtrado CAN (misma lógica que WiFi).
+  Future<void> _detectAndConfigureProtocol() async {
+    final protocolRaw = await _sendCommand('ATDPN');
+    if (protocolRaw == null || protocolRaw.isEmpty) {
+      _isCan = false;
+      return;
+    }
+
+    var cleaned = protocolRaw.trim().toUpperCase();
+    if (cleaned.startsWith('A')) cleaned = cleaned.substring(1);
+    final protocolNum = int.tryParse(cleaned, radix: 16) ?? 0;
+    _isCan = protocolNum >= 6;
+    _log.log(
+      LogCategory.connection,
+      'BT Protocol: $protocolRaw (num=$protocolNum, CAN=$_isCan)',
+    );
+
+    if (!_isCan) return;
+
+    await _sendCommand('ATH1');
+    final response = await _sendCommand('0100');
+    await _sendCommand('ATH0');
+
+    if (response == null || response.isEmpty) return;
+
+    _primaryEcuAddress = WifiObd2Service.findPrimaryEcuAddress(response);
+
+    if (_primaryEcuAddress != null) {
+      final craResult = await _sendCommand('ATCRA$_primaryEcuAddress');
+      if (craResult != null &&
+          !craResult.contains('?') &&
+          !craResult.toUpperCase().contains('ERROR')) {
+        _log.log(
+          LogCategory.connection,
+          'BT CAN filter: ATCRA$_primaryEcuAddress',
+        );
+      } else {
+        _log.log(
+          LogCategory.connection,
+          'BT CAN filter ATCRA not supported, using software filtering',
+        );
+      }
+    }
+  }
+
+  /// Construye comando PID con sufijo '1' en CAN para single-response.
+  String _pidCommand(String pid) {
+    if (_isCan && _primaryEcuAddress != null) {
+      return '${pid}1';
+    }
+    return pid;
   }
 
   @override
   Future<void> disconnect() async {
     _log.log(LogCategory.connection, 'BT: disconnecting');
+    _isCan = false;
+    _primaryEcuAddress = null;
     await _connection?.close();
     _connection = null;
     _connectedDevice = null;
@@ -85,6 +153,9 @@ class Obd2Service implements Obd2BaseService {
 
   Future<String?> _sendCommand(String command) async {
     if (!isConnected) return null;
+
+    // Limpiar buffer de datos residuales de comandos anteriores
+    _buffer = '';
 
     final completer = Completer<String>();
     late StreamSubscription sub;
@@ -110,13 +181,17 @@ class Obd2Service implements Obd2BaseService {
       LogCategory.command,
       'BT RX: ${response.isEmpty ? "<empty>" : response}',
     );
-    return response;
+    if (response.isEmpty) return null;
+
+    // Sanitizar: eliminar líneas de error/ruido de ECUs secundarias
+    final sanitized = WifiObd2Service.sanitizeResponse(response);
+    return sanitized.isEmpty ? null : sanitized;
   }
 
   /// Lee RPM: PID 010C
   @override
   Future<int?> getRPM() async {
-    final response = await _sendCommand('010C');
+    final response = await _sendCommand(_pidCommand('010C'));
     if (WifiObd2Service.isErrorResponse(response)) return null;
     final raw = Obd2BaseService.parseTwoBytes(response, expectedHeader: '410C');
     final rpm = raw != null ? raw ~/ 4 : null;
@@ -127,7 +202,7 @@ class Obd2Service implements Obd2BaseService {
   /// Lee velocidad: PID 010D
   @override
   Future<int?> getSpeed() async {
-    final response = await _sendCommand('010D');
+    final response = await _sendCommand(_pidCommand('010D'));
     if (WifiObd2Service.isErrorResponse(response)) return null;
     final speed = Obd2BaseService.parseOneByte(
       response,
@@ -140,7 +215,7 @@ class Obd2Service implements Obd2BaseService {
   /// Lee temperatura del motor: PID 0105
   @override
   Future<int?> getCoolantTemp() async {
-    final response = await _sendCommand('0105');
+    final response = await _sendCommand(_pidCommand('0105'));
     if (WifiObd2Service.isErrorResponse(response)) return null;
     final raw = Obd2BaseService.parseOneByte(response, expectedHeader: '4105');
     final temp = raw != null ? raw - 40 : null;
@@ -151,7 +226,7 @@ class Obd2Service implements Obd2BaseService {
   /// Lee carga del motor: PID 0104
   @override
   Future<int?> getEngineLoad() async {
-    final response = await _sendCommand('0104');
+    final response = await _sendCommand(_pidCommand('0104'));
     if (WifiObd2Service.isErrorResponse(response)) return null;
     final raw = Obd2BaseService.parseOneByte(response, expectedHeader: '4104');
     final load = raw != null ? (raw * 100) ~/ 255 : null;
@@ -162,7 +237,7 @@ class Obd2Service implements Obd2BaseService {
   /// Lee presión del colector de admisión: PID 010B
   @override
   Future<int?> getIntakeManifoldPressure() async {
-    final response = await _sendCommand('010B');
+    final response = await _sendCommand(_pidCommand('010B'));
     if (WifiObd2Service.isErrorResponse(response)) return null;
     final pressure = Obd2BaseService.parseOneByte(
       response,
@@ -175,7 +250,7 @@ class Obd2Service implements Obd2BaseService {
   /// Lee nivel de combustible: PID 012F
   @override
   Future<int?> getFuelLevel() async {
-    final response = await _sendCommand('012F');
+    final response = await _sendCommand(_pidCommand('012F'));
     if (WifiObd2Service.isErrorResponse(response)) return null;
     final raw = Obd2BaseService.parseOneByte(response, expectedHeader: '412F');
     final fuel = raw != null ? (raw * 100) ~/ 255 : null;
@@ -213,9 +288,20 @@ class Obd2Service implements Obd2BaseService {
 
   /// Detecta el número de ECUs respondiendo al PID 0100.
   Future<int> detectECUCount() async {
+    // Desactivar filtro CAN temporalmente para ver todas las ECUs.
+    // ATAR = Automatic Receive — restaura el filtrado automático del ELM327.
+    if (_isCan && _primaryEcuAddress != null) {
+      await _sendCommand('ATAR');
+    }
+
     await _sendCommand('ATH1');
     final response = await _sendCommand('0100');
     await _sendCommand('ATH0');
+
+    // Restaurar filtro CAN
+    if (_isCan && _primaryEcuAddress != null) {
+      await _sendCommand('ATCRA$_primaryEcuAddress');
+    }
 
     if (response == null ||
         response.isEmpty ||
