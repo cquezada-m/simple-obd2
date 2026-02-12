@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/mileage_source.dart';
 
 enum AppLanguage { es, en }
 
@@ -336,6 +337,22 @@ class AppLocalizations {
   String get sensorCategory => _t('Categoría', 'Category');
   String get sensorNormalMax => _t('Máx. normal', 'Normal max');
   String get sensorWarningMax => _t('Máx. advertencia', 'Warning max');
+  String get sensorDiscovering =>
+      _t('Detectando sensores del vehículo...', 'Detecting vehicle sensors...');
+  String get sensorDetected => _t('sensores detectados', 'sensors detected');
+  String get sensorNoneFound => _t(
+    'No se encontraron sensores en esta categoría',
+    'No sensors found in this category',
+  );
+  String get sensorDiscoveryFailed => _t(
+    'No se pudieron detectar los sensores del vehículo. Verifica la conexión con el adaptador OBD2.',
+    'Could not detect vehicle sensors. Check the OBD2 adapter connection.',
+  );
+  String get sensorRetry => _t('Reintentar', 'Retry');
+  String get sensorNotConnected => _t(
+    'Conecta un adaptador OBD2 para explorar los sensores del vehículo.',
+    'Connect an OBD2 adapter to explore vehicle sensors.',
+  );
 
   // ── Mileage Check ──
   String get mileageCheckTitle =>
@@ -350,6 +367,57 @@ class AppLocalizations {
     'Resultado indicativo. Consulte un profesional para verificación legal.',
     'Indicative result. Consult a professional for legal verification.',
   );
+
+  // Mileage verdict labels
+  String get mileageVerdictConsistent =>
+      _t('Kilometraje Consistente', 'Mileage Consistent');
+  String get mileageVerdictSuspicious =>
+      _t('Posible Reemplazo de Módulo', 'Possible Module Replacement');
+  String get mileageVerdictTampered =>
+      _t('Posible Manipulación de Odómetro', 'Possible Odometer Tampering');
+  String get mileageVerdictInsufficient =>
+      _t('Datos Insuficientes', 'Insufficient Data');
+
+  // Mileage verdict explanations
+  String mileageExplConsistent(int count) => _t(
+    'Las lecturas de odómetro de $count módulos son consistentes entre sí (desviación < 5%).',
+    'Odometer readings from $count modules are consistent with each other (deviation < 5%).',
+  );
+  String get mileageExplSuspicious => _t(
+    'Se detectaron discrepancias menores (5-15%) entre módulos. Podría indicar reemplazo de un módulo.',
+    'Minor discrepancies (5-15%) detected between modules. Could indicate a module replacement.',
+  );
+  String get mileageExplTampered => _t(
+    'Se detectaron discrepancias significativas (>15%) entre módulos. Posible manipulación del odómetro.',
+    'Significant discrepancies (>15%) detected between modules. Possible odometer tampering.',
+  );
+  String get mileageExplInsufficient => _t(
+    'No hay suficientes lecturas de odómetro para comparar entre módulos. Solo se obtuvieron distancias parciales.',
+    'Not enough odometer readings to compare across modules. Only partial distances were obtained.',
+  );
+  String get mileageExplNoData => _t(
+    'No se pudieron obtener lecturas de kilometraje de los módulos del vehículo.',
+    'Could not obtain mileage readings from vehicle modules.',
+  );
+
+  // Mileage source names
+  String get mileageSrcOdometer => _t('Odómetro (PID A6)', 'Odometer (PID A6)');
+  String get mileageSrcDistDtcClear =>
+      _t('Distancia desde borrado DTCs', 'Distance since DTCs cleared');
+  String get mileageSrcDistMil =>
+      _t('Distancia con MIL encendido', 'Distance with MIL on');
+  String get mileageSrcEcm => _t('ECM (Motor)', 'ECM (Engine)');
+  String get mileageSrcTcm => _t('TCM (Transmisión)', 'TCM (Transmission)');
+  String get mileageSrcAbs => _t('ABS / ESP', 'ABS / ESP');
+
+  String mileageSourceName(MileageSourceKey key) => switch (key) {
+    MileageSourceKey.odometerPidA6 => mileageSrcOdometer,
+    MileageSourceKey.distanceSinceDtcClear => mileageSrcDistDtcClear,
+    MileageSourceKey.distanceWithMil => mileageSrcDistMil,
+    MileageSourceKey.ecm => mileageSrcEcm,
+    MileageSourceKey.tcm => mileageSrcTcm,
+    MileageSourceKey.abs => mileageSrcAbs,
+  };
 
   // ── Chat AI ──
   String get chatAiTitle => _t('Chat AI', 'AI Chat');

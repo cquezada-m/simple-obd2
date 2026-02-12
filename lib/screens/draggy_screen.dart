@@ -83,7 +83,9 @@ class _DraggyScreenState extends State<DraggyScreen> {
 
       if (_state == DragState.running) {
         final now = DateTime.now();
-        _elapsed = now.difference(_startTime!);
+        final start = _startTime;
+        if (start == null) return;
+        _elapsed = now.difference(start);
         if (currentRpm > _maxRpm) _maxRpm = currentRpm;
 
         _samples.add(

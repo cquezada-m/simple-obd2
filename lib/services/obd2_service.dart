@@ -11,6 +11,7 @@ class Obd2Service implements Obd2BaseService {
   BluetoothConnection? _connection;
   BluetoothDevice? _connectedDevice;
   final _responseController = StreamController<String>.broadcast();
+  StreamSubscription<Uint8List>? _inputSubscription;
   String _buffer = '';
 
   Stream<String> get responseStream => _responseController.stream;
@@ -54,7 +55,9 @@ class Obd2Service implements Obd2BaseService {
     _connectedDevice = device;
     _log.log(LogCategory.connection, 'BT: connection established');
 
-    _connection!.input?.listen(
+    // Cancel any previous subscription to avoid orphaned listeners on reconnect
+    await _inputSubscription?.cancel();
+    _inputSubscription = _connection!.input?.listen(
       (data) {
         _buffer += ascii.decode(data);
         if (_buffer.contains('>')) {
@@ -146,7 +149,11 @@ class Obd2Service implements Obd2BaseService {
     _log.log(LogCategory.connection, 'BT: disconnecting');
     _isCan = false;
     _primaryEcuAddress = null;
-    await _connection?.close();
+    await _inputSubscription?.cancel();
+    _inputSubscription = null;
+    try {
+      await _connection?.close();
+    } catch (_) {}
     _connection = null;
     _connectedDevice = null;
   }
@@ -396,6 +403,8 @@ class Obd2Service implements Obd2BaseService {
 
   @override
   void dispose() {
+    _inputSubscription?.cancel();
+    _inputSubscription = null;
     disconnect();
     _responseController.close();
   }

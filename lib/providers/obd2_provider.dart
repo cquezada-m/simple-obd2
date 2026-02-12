@@ -28,8 +28,14 @@ class Obd2Provider extends ChangeNotifier {
   final WifiObd2Service _wifiService = WifiObd2Service();
   Timer? _fastPollingTimer; // RPM, Speed – every 200ms
   Timer? _slowPollingTimer; // Temp, Load, Pressure, Fuel – every 5s
+  bool _disposed = false;
 
   static final _log = AppLogger.instance;
+
+  /// Safe notifyListeners that won't throw after dispose.
+  void _safeNotify() {
+    if (!_disposed) notifyListeners();
+  }
 
   ConnectionState connectionState = ConnectionState.disconnected;
   ConnectionMode? activeMode;
@@ -67,7 +73,7 @@ class Obd2Provider extends ChangeNotifier {
   }) async {
     await SecureStorageService.saveGeminiApiKey(apiKey);
     _geminiService = GeminiService(apiKey: apiKey, model: model);
-    notifyListeners();
+    _safeNotify();
   }
 
   /// Carga el API key desde almacenamiento seguro (llamar al iniciar la app).
@@ -75,7 +81,7 @@ class Obd2Provider extends ChangeNotifier {
     final apiKey = await SecureStorageService.getGeminiApiKey();
     if (apiKey != null && apiKey.isNotEmpty) {
       _geminiService = GeminiService(apiKey: apiKey, model: model);
-      notifyListeners();
+      _safeNotify();
     }
   }
 
@@ -85,7 +91,7 @@ class Obd2Provider extends ChangeNotifier {
     _geminiService = null;
     aiDiagnostic = null;
     aiDiagnosticError = null;
-    notifyListeners();
+    _safeNotify();
   }
 
   bool get isGeminiConfigured => _geminiService != null;
@@ -94,18 +100,18 @@ class Obd2Provider extends ChangeNotifier {
   Future<void> requestAiDiagnostic() async {
     if (_geminiService == null) {
       aiDiagnosticError = 'Gemini no está configurado. Proporciona un API key.';
-      notifyListeners();
+      _safeNotify();
       return;
     }
     if (!isConnected) {
       aiDiagnosticError = 'Conecta el vehículo primero.';
-      notifyListeners();
+      _safeNotify();
       return;
     }
 
     isLoadingAiDiagnostic = true;
     aiDiagnosticError = null;
-    notifyListeners();
+    _safeNotify();
 
     try {
       aiDiagnostic = await _geminiService!.getDiagnostic(
@@ -124,7 +130,7 @@ class Obd2Provider extends ChangeNotifier {
       _log.log(LogCategory.error, 'Provider: AI generic error', '$e');
     } finally {
       isLoadingAiDiagnostic = false;
-      notifyListeners();
+      _safeNotify();
     }
   }
 
@@ -159,7 +165,7 @@ class Obd2Provider extends ChangeNotifier {
     connectionState = ConnectionState.disconnected;
     connectionError = 'Conexión perdida con el adaptador OBD2.';
     activeMode = null;
-    notifyListeners();
+    _safeNotify();
   }
 
   Obd2Provider() {
@@ -234,7 +240,7 @@ class Obd2Provider extends ChangeNotifier {
         final didEnable = await _btService.enableBluetooth();
         if (!didEnable) {
           pairedDevices = [];
-          notifyListeners();
+          _safeNotify();
           return;
         }
       }
@@ -243,7 +249,7 @@ class Obd2Provider extends ChangeNotifier {
       pairedDevices = [];
       debugPrint('Error scanning devices: $e');
     }
-    notifyListeners();
+    _safeNotify();
   }
 
   Future<void> connectBluetooth(BluetoothDevice device) async {
@@ -254,7 +260,7 @@ class Obd2Provider extends ChangeNotifier {
     connectionState = ConnectionState.connecting;
     activeMode = ConnectionMode.bluetooth;
     connectionError = null;
-    notifyListeners();
+    _safeNotify();
 
     try {
       await _btService.connect(device);
@@ -265,7 +271,7 @@ class Obd2Provider extends ChangeNotifier {
       activeMode = null;
       _log.log(LogCategory.error, 'Provider: BT connection failed', '$e');
     }
-    notifyListeners();
+    _safeNotify();
   }
 
   // ── WiFi (iOS / universal) ───────────────────────────────
@@ -274,7 +280,7 @@ class Obd2Provider extends ChangeNotifier {
     connectionState = ConnectionState.connecting;
     activeMode = ConnectionMode.wifi;
     connectionError = null;
-    notifyListeners();
+    _safeNotify();
 
     final targetHost = host ?? wifiHost;
     final targetPort = port ?? wifiPort;
@@ -295,7 +301,7 @@ class Obd2Provider extends ChangeNotifier {
       activeMode = null;
       _log.log(LogCategory.error, 'Provider: WiFi connection failed', '$e');
     }
-    notifyListeners();
+    _safeNotify();
   }
 
   // ── Post-conexión compartido ─────────────────────────────
@@ -307,7 +313,17 @@ class Obd2Provider extends ChangeNotifier {
       'Provider: connected, reading initial data',
     );
 
-    final service = _activeService!;
+    final service = _activeService;
+    if (service == null) {
+      _log.log(
+        LogCategory.error,
+        'Provider: _activeService is null after connect',
+      );
+      connectionState = ConnectionState.disconnected;
+      connectionError = 'Error interno: servicio no disponible.';
+      activeMode = null;
+      return;
+    }
     try {
       vin = await service.getVIN() ?? 'No disponible';
       protocol = await service.getProtocol() ?? 'Auto';
@@ -348,7 +364,7 @@ class Obd2Provider extends ChangeNotifier {
     connectionState = ConnectionState.connecting;
     useMockData = true;
     connectionError = null;
-    notifyListeners();
+    _safeNotify();
 
     await Future.delayed(const Duration(seconds: 2));
 
@@ -436,7 +452,7 @@ class Obd2Provider extends ChangeNotifier {
       'Provider: MOCK mode active',
       'VIN: $vin, DTCs: ${dtcCodes.length}, Manufacturer: ${vehicleInfo.manufacturer}',
     );
-    notifyListeners();
+    _safeNotify();
   }
 
   // ── Desconexión ──────────────────────────────────────────
@@ -463,12 +479,12 @@ class Obd2Provider extends ChangeNotifier {
     aiDiagnosticError = null;
     activeAlerts = [];
     _initDefaultParams();
-    notifyListeners();
+    _safeNotify();
   }
 
   Future<void> clearCodes() async {
     isClearing = true;
-    notifyListeners();
+    _safeNotify();
 
     if (useMockData) {
       await Future.delayed(const Duration(seconds: 2));
@@ -478,7 +494,7 @@ class Obd2Provider extends ChangeNotifier {
 
     dtcCodes = [];
     isClearing = false;
-    notifyListeners();
+    _safeNotify();
   }
 
   // ── Polling (single sequential loop to avoid socket contention) ──
@@ -525,7 +541,9 @@ class Obd2Provider extends ChangeNotifier {
     _isPolling = true;
 
     try {
-      if (!isConnected || useMockData) return;
+      if (!isConnected || useMockData || _disposed) return;
+      // Verify service is still the active one (could change on reconnect)
+      if (_activeService != service) return;
 
       // Leer RPM y Speed (siempre)
       final rpm = await service.getRPM();
@@ -552,7 +570,7 @@ class Obd2Provider extends ChangeNotifier {
         liveParams[4],
         liveParams[5],
       ];
-      notifyListeners();
+      _safeNotify();
 
       // Cada 10 ciclos (~5s) leer parámetros lentos
       _pollCycle++;
@@ -569,7 +587,7 @@ class Obd2Provider extends ChangeNotifier {
   }
 
   Future<void> _pollSlowParams(Obd2BaseService service) async {
-    if (!isConnected || useMockData) return;
+    if (!isConnected || useMockData || _disposed) return;
 
     final temp = await service.getCoolantTemp();
     if (!isConnected) return;
@@ -610,7 +628,7 @@ class Obd2Provider extends ChangeNotifier {
           : liveParams[5],
     ];
     _checkAlerts();
-    notifyListeners();
+    _safeNotify();
   }
 
   void _startMockPolling() {
@@ -629,7 +647,7 @@ class Obd2Provider extends ChangeNotifier {
         liveParams[4],
         liveParams[5],
       ];
-      notifyListeners();
+      _safeNotify();
     });
 
     // Slow tier mock: Temp, Load, Pressure every 5s
@@ -652,7 +670,7 @@ class Obd2Provider extends ChangeNotifier {
           percentage: liveParams[5].percentage,
         ),
       ];
-      notifyListeners();
+      _safeNotify();
     });
   }
 
@@ -689,7 +707,7 @@ class Obd2Provider extends ChangeNotifier {
     activeAlerts = activeAlerts
         .where((a) => a.config.parameterKey != config.parameterKey)
         .toList();
-    notifyListeners();
+    _safeNotify();
   }
 
   // ── Recomendaciones AI ─────────────────────────────────────
@@ -775,8 +793,9 @@ class Obd2Provider extends ChangeNotifier {
       }
     }
 
-    final temp = liveParams.firstWhere((p) => p.label == 'engine_temp');
-    if (int.tryParse(temp.value) != null && int.parse(temp.value) > 100) {
+    final temp = liveParams.where((p) => p.label == 'engine_temp').firstOrNull;
+    final tempValue = temp != null ? int.tryParse(temp.value) : null;
+    if (tempValue != null && tempValue > 100) {
       recs.add(
         Recommendation(
           title: isEs
@@ -825,6 +844,7 @@ class Obd2Provider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _cancelPolling();
     _btService.dispose();
     _wifiService.dispose();

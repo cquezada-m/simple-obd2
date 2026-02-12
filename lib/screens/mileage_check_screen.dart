@@ -112,14 +112,11 @@ class _MileageCheckScreenState extends State<MileageCheckScreen> {
                   else if (_result != null) ...[
                     _buildVerdictCard(l),
                     const SizedBox(height: 12),
-                    MileageComparisonCard(
-                      sources: _result!.sources,
-                      locale: l.locale,
-                    ),
+                    MileageComparisonCard(sources: _result!.sources, l: l),
                     const SizedBox(height: 12),
                     GlassCard(
                       child: Text(
-                        _result!.explanationLocalized(l.locale),
+                        _verdictExplanation(l),
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           color: AppTheme.textSecondary,
@@ -169,6 +166,28 @@ class _MileageCheckScreenState extends State<MileageCheckScreen> {
     );
   }
 
+  String _verdictLabel(AppLocalizations l) {
+    return switch (_result!.verdict) {
+      MileageVerdict.consistent => l.mileageVerdictConsistent,
+      MileageVerdict.suspicious => l.mileageVerdictSuspicious,
+      MileageVerdict.tampered => l.mileageVerdictTampered,
+      MileageVerdict.insufficientData => l.mileageVerdictInsufficient,
+    };
+  }
+
+  String _verdictExplanation(AppLocalizations l) {
+    final r = _result!;
+    return switch (r.verdict) {
+      MileageVerdict.consistent => l.mileageExplConsistent(
+        r.odometerSourceCount,
+      ),
+      MileageVerdict.suspicious => l.mileageExplSuspicious,
+      MileageVerdict.tampered => l.mileageExplTampered,
+      MileageVerdict.insufficientData =>
+        r.referenceKm != null ? l.mileageExplInsufficient : l.mileageExplNoData,
+    };
+  }
+
   Widget _buildVerdictCard(AppLocalizations l) {
     final verdict = _result!.verdict;
     final (color, icon) = switch (verdict) {
@@ -181,6 +200,10 @@ class _MileageCheckScreenState extends State<MileageCheckScreen> {
         Icons.warning_amber_rounded,
       ),
       MileageVerdict.tampered => (AppTheme.error, Icons.error_rounded),
+      MileageVerdict.insufficientData => (
+        AppTheme.textTertiary,
+        Icons.info_outline_rounded,
+      ),
     };
 
     return GlassCard(
@@ -189,7 +212,7 @@ class _MileageCheckScreenState extends State<MileageCheckScreen> {
           Icon(icon, size: 48, color: color),
           const SizedBox(height: 8),
           Text(
-            _result!.verdictLabel(l.locale),
+            _verdictLabel(l),
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.w600,

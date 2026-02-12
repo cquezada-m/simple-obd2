@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../l10n/app_localizations.dart';
 import '../models/mileage_source.dart';
 import '../theme/app_theme.dart';
 
 /// Visual comparison table of mileage readings from different modules.
 class MileageComparisonCard extends StatelessWidget {
   final List<MileageSource> sources;
-  final String locale;
+  final AppLocalizations l;
 
   const MileageComparisonCard({
     super.key,
     required this.sources,
-    required this.locale,
+    required this.l,
   });
 
   @override
@@ -44,7 +45,7 @@ class MileageComparisonCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    s.name(locale),
+                    l.mileageSourceName(s.key),
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: AppTheme.textPrimary,

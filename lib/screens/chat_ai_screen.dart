@@ -92,6 +92,22 @@ class _ChatAiScreenState extends State<ChatAiScreen> {
     }
 
     try {
+      final gemini = provider.geminiService;
+      if (gemini == null) {
+        setState(() {
+          _messages.add(
+            ChatMessage(
+              text: AppLocalizations.of(context).chatAiDemoReply,
+              role: ChatRole.assistant,
+              timestamp: DateTime.now(),
+            ),
+          );
+          _isLoading = false;
+        });
+        _scrollToBottom();
+        return;
+      }
+
       final history = _messages
           .where((m) => m != _messages.last)
           .map(
@@ -102,12 +118,13 @@ class _ChatAiScreenState extends State<ChatAiScreen> {
           )
           .toList();
 
-      final response = await provider.geminiService!.chat(
+      final response = await gemini.chat(
         history: history,
         userMessage: text,
         vehicleContext: _buildVehicleContext(provider),
       );
 
+      if (!mounted) return;
       setState(() {
         _messages.add(
           ChatMessage(
@@ -118,6 +135,7 @@ class _ChatAiScreenState extends State<ChatAiScreen> {
         );
       });
     } on GeminiException catch (e) {
+      if (!mounted) return;
       setState(() {
         _messages.add(
           ChatMessage(
@@ -128,6 +146,7 @@ class _ChatAiScreenState extends State<ChatAiScreen> {
         );
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _messages.add(
           ChatMessage(
@@ -138,7 +157,7 @@ class _ChatAiScreenState extends State<ChatAiScreen> {
         );
       });
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
       _scrollToBottom();
     }
   }
