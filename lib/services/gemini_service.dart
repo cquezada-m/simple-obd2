@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/ai_diagnostic.dart';
@@ -76,11 +77,20 @@ class GeminiService {
       'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 1024},
     });
 
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: body,
-    );
+    final http.Response response;
+    try {
+      response = await http
+          .post(url, headers: {'Content-Type': 'application/json'}, body: body)
+          .timeout(const Duration(seconds: 30));
+    } on TimeoutException {
+      _log.log(LogCategory.error, 'Gemini API: request timed out');
+      throw const GeminiException(
+        'La solicitud a Gemini tardó demasiado. Verifica tu conexión a internet.',
+      );
+    } catch (e) {
+      _log.log(LogCategory.error, 'Gemini API: network error', '$e');
+      throw GeminiException('Error de red al contactar Gemini: $e');
+    }
 
     if (response.statusCode != 200) {
       _log.log(
@@ -365,11 +375,18 @@ class GeminiService {
       'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 1024},
     });
 
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: body,
-    );
+    final http.Response response;
+    try {
+      response = await http
+          .post(url, headers: {'Content-Type': 'application/json'}, body: body)
+          .timeout(const Duration(seconds: 30));
+    } on TimeoutException {
+      throw const GeminiException(
+        'La solicitud a Gemini tardó demasiado. Verifica tu conexión a internet.',
+      );
+    } catch (e) {
+      throw GeminiException('Error de red al contactar Gemini: $e');
+    }
 
     if (response.statusCode != 200) {
       throw GeminiException(

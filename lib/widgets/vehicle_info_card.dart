@@ -176,15 +176,22 @@ class _VehicleInfoCardState extends State<VehicleInfoCard> {
               color: AppTheme.textSecondary,
             ),
           ),
-          const Spacer(),
-          Flexible(
+          const SizedBox(width: 12),
+          Expanded(
             child: Text(
               value,
-              style: GoogleFonts.inter(
-                fontSize: mono ? 12 : 13,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textPrimary,
-              ),
+              textAlign: TextAlign.right,
+              style: mono
+                  ? GoogleFonts.jetBrainsMono(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary,
+                    )
+                  : GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary,
+                    ),
               overflow: TextOverflow.ellipsis,
             ),
           ),

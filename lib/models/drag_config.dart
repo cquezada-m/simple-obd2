@@ -57,4 +57,22 @@ class DragConfig {
     hundredTo200,
     quarterMile,
   ];
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'nameEn': nameEn,
+    'startSpeedKmh': startSpeedKmh,
+    'targetSpeedKmh': targetSpeedKmh,
+    'isQuarterMile': isQuarterMile,
+  };
+
+  factory DragConfig.fromJson(Map<String, dynamic> json) {
+    return DragConfig(
+      name: json['name'] as String,
+      nameEn: json['nameEn'] as String,
+      startSpeedKmh: (json['startSpeedKmh'] as num).toDouble(),
+      targetSpeedKmh: (json['targetSpeedKmh'] as num).toDouble(),
+      isQuarterMile: json['isQuarterMile'] as bool? ?? false,
+    );
+  }
 }

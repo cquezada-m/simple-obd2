@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/mileage_source.dart';
 
 enum AppLanguage { es, en }
 
@@ -336,6 +337,22 @@ class AppLocalizations {
   String get sensorCategory => _t('Categoría', 'Category');
   String get sensorNormalMax => _t('Máx. normal', 'Normal max');
   String get sensorWarningMax => _t('Máx. advertencia', 'Warning max');
+  String get sensorDiscovering =>
+      _t('Detectando sensores del vehículo...', 'Detecting vehicle sensors...');
+  String get sensorDetected => _t('sensores detectados', 'sensors detected');
+  String get sensorNoneFound => _t(
+    'No se encontraron sensores en esta categoría',
+    'No sensors found in this category',
+  );
+  String get sensorDiscoveryFailed => _t(
+    'No se pudieron detectar los sensores del vehículo. Verifica la conexión con el adaptador OBD2.',
+    'Could not detect vehicle sensors. Check the OBD2 adapter connection.',
+  );
+  String get sensorRetry => _t('Reintentar', 'Retry');
+  String get sensorNotConnected => _t(
+    'Conecta un adaptador OBD2 para explorar los sensores del vehículo.',
+    'Connect an OBD2 adapter to explore vehicle sensors.',
+  );
 
   // ── Mileage Check ──
   String get mileageCheckTitle =>
@@ -350,6 +367,57 @@ class AppLocalizations {
     'Resultado indicativo. Consulte un profesional para verificación legal.',
     'Indicative result. Consult a professional for legal verification.',
   );
+
+  // Mileage verdict labels
+  String get mileageVerdictConsistent =>
+      _t('Kilometraje Consistente', 'Mileage Consistent');
+  String get mileageVerdictSuspicious =>
+      _t('Posible Reemplazo de Módulo', 'Possible Module Replacement');
+  String get mileageVerdictTampered =>
+      _t('Posible Manipulación de Odómetro', 'Possible Odometer Tampering');
+  String get mileageVerdictInsufficient =>
+      _t('Datos Insuficientes', 'Insufficient Data');
+
+  // Mileage verdict explanations
+  String mileageExplConsistent(int count) => _t(
+    'Las lecturas de odómetro de $count módulos son consistentes entre sí (desviación < 5%).',
+    'Odometer readings from $count modules are consistent with each other (deviation < 5%).',
+  );
+  String get mileageExplSuspicious => _t(
+    'Se detectaron discrepancias menores (5-15%) entre módulos. Podría indicar reemplazo de un módulo.',
+    'Minor discrepancies (5-15%) detected between modules. Could indicate a module replacement.',
+  );
+  String get mileageExplTampered => _t(
+    'Se detectaron discrepancias significativas (>15%) entre módulos. Posible manipulación del odómetro.',
+    'Significant discrepancies (>15%) detected between modules. Possible odometer tampering.',
+  );
+  String get mileageExplInsufficient => _t(
+    'No hay suficientes lecturas de odómetro para comparar entre módulos. Solo se obtuvieron distancias parciales.',
+    'Not enough odometer readings to compare across modules. Only partial distances were obtained.',
+  );
+  String get mileageExplNoData => _t(
+    'No se pudieron obtener lecturas de kilometraje de los módulos del vehículo.',
+    'Could not obtain mileage readings from vehicle modules.',
+  );
+
+  // Mileage source names
+  String get mileageSrcOdometer => _t('Odómetro (PID A6)', 'Odometer (PID A6)');
+  String get mileageSrcDistDtcClear =>
+      _t('Distancia desde borrado DTCs', 'Distance since DTCs cleared');
+  String get mileageSrcDistMil =>
+      _t('Distancia con MIL encendido', 'Distance with MIL on');
+  String get mileageSrcEcm => _t('ECM (Motor)', 'ECM (Engine)');
+  String get mileageSrcTcm => _t('TCM (Transmisión)', 'TCM (Transmission)');
+  String get mileageSrcAbs => _t('ABS / ESP', 'ABS / ESP');
+
+  String mileageSourceName(MileageSourceKey key) => switch (key) {
+    MileageSourceKey.odometerPidA6 => mileageSrcOdometer,
+    MileageSourceKey.distanceSinceDtcClear => mileageSrcDistDtcClear,
+    MileageSourceKey.distanceWithMil => mileageSrcDistMil,
+    MileageSourceKey.ecm => mileageSrcEcm,
+    MileageSourceKey.tcm => mileageSrcTcm,
+    MileageSourceKey.abs => mileageSrcAbs,
+  };
 
   // ── Chat AI ──
   String get chatAiTitle => _t('Chat AI', 'AI Chat');
@@ -426,6 +494,128 @@ class AppLocalizations {
   // ── UX Hints ──
   String get swipeHint => _t('Desliza', 'Swipe');
   String get alertThreshold => _t('límite', 'limit');
+
+  // ── Paywall / Subscription ──
+  String get paywallTitle => _t('Desbloquea PRO', 'Unlock PRO');
+  String get paywallSubtitle =>
+      _t('Accede a todas las funcionalidades', 'Access all features');
+  String get paywallFeat1 => _t(
+    '6 parámetros en vivo + explorador completo',
+    '6 live parameters + full explorer',
+  );
+  String get paywallFeat2 =>
+      _t('DTCs ilimitados + diagnóstico AI', 'Unlimited DTCs + AI diagnostics');
+  String get paywallFeat3 => _t(
+    'Historial de sesiones y reportes PDF',
+    'Session history & PDF reports',
+  );
+  String get paywallFeat4 => _t(
+    'Draggy completo + verificación kilometraje',
+    'Full Draggy + mileage verification',
+  );
+  String get paywallFeat5 => _t(
+    'Chat AI contextual + alertas personalizables',
+    'Contextual AI chat + custom alerts',
+  );
+  String get paywallBestValue => _t('Mejor valor', 'Best value');
+  String get paywallCta => _t('Suscribirse a PRO', 'Subscribe to PRO');
+  String get paywallRestore => _t('Restaurar compras', 'Restore purchases');
+  String get paywallLegal => _t(
+    'La suscripción se renueva automáticamente a menos que se cancele al menos 24h antes del fin del período actual. Gestiona tu suscripción en Ajustes del dispositivo.',
+    'Subscription auto-renews unless cancelled at least 24h before the end of the current period. Manage your subscription in device Settings.',
+  );
+  String get paywallSuccess => _t('¡Bienvenido a PRO!', 'Welcome to PRO!');
+  String get paywallRestored =>
+      _t('Compra restaurada correctamente', 'Purchase restored successfully');
+  String get paywallNoRestore =>
+      _t('No se encontraron compras anteriores', 'No previous purchases found');
+
+  // ── PRO Feature Gating ──
+  String get proBadge => _t('PRO', 'PRO');
+  String get proRequired => _t('Función PRO', 'PRO Feature');
+  String get proUpgrade => _t('Upgrade a PRO', 'Upgrade to PRO');
+  String get proUnlockAll =>
+      _t('Desbloquea todas las funcionalidades', 'Unlock all features');
+  String dtcLimitMsg(int visible, int total) => _t(
+    'Mostrando $visible de $total códigos',
+    'Showing $visible of $total codes',
+  );
+  String get dtcSeeAll => _t('Ver todos los códigos', 'See all codes');
+  String get clearDtcLimitReached => _t(
+    'Límite de borrado alcanzado en esta sesión. Actualiza a PRO para borrar sin límite.',
+    'Clear limit reached this session. Upgrade to PRO for unlimited clearing.',
+  );
+
+  // ── Vehicle Profiles ──
+  String get profilesTitle => _t('Mis Vehículos', 'My Vehicles');
+  String get profilesEmpty =>
+      _t('No hay vehículos guardados', 'No saved vehicles');
+  String get profilesAdd => _t('Agregar vehículo', 'Add vehicle');
+  String get profilesActive => _t('Activo', 'Active');
+  String get profilesNickname => _t('Apodo (opcional)', 'Nickname (optional)');
+
+  // ── Alert Settings ──
+  String get alertSettingsTitle => _t('Configurar Alertas', 'Alert Settings');
+  String get alertSettingsDesc => _t(
+    'Personaliza los umbrales de alerta para cada parámetro. Recibirás una notificación cuando se supere el límite.',
+    'Customize alert thresholds for each parameter. You will be notified when the limit is exceeded.',
+  );
+
+  // ── Draggy extras ──
+  String get draggyVsBest => _t('vs mejor tiempo', 'vs best time');
+  String get draggyHistory => _t('Historial de runs', 'Run history');
+  String get draggyProOnly => _t(
+    'Solo 0-100 km/h disponible en FREE',
+    'Only 0-100 km/h available in FREE',
+  );
+
+  // ── Emissions PRO detail ──
+  String get emissionsProRecommendations =>
+      _t('Recomendaciones por código', 'Recommendations per code');
+  String get emissionsProUnlock => _t(
+    'Desbloquea recomendaciones detalladas con PRO',
+    'Unlock detailed recommendations with PRO',
+  );
+  String get emissionsRecPowertrain => _t(
+    'Código de tren motriz: revisar motor, transmisión, sistema de combustible y emisiones. Puede requerir diagnóstico con escáner profesional.',
+    'Powertrain code: check engine, transmission, fuel system and emissions. May require professional scanner diagnosis.',
+  );
+  String get emissionsRecChassis => _t(
+    'Código de chasis: revisar sistema de frenos, dirección y suspensión.',
+    'Chassis code: check braking system, steering and suspension.',
+  );
+  String get emissionsRecBody => _t(
+    'Código de carrocería: revisar sistemas eléctricos del habitáculo, airbags y climatización.',
+    'Body code: check cabin electrical systems, airbags and climate control.',
+  );
+  String get emissionsRecNetwork => _t(
+    'Código de red: revisar comunicación entre módulos (CAN bus). Posible falla de cableado o módulo.',
+    'Network code: check inter-module communication (CAN bus). Possible wiring or module failure.',
+  );
+  String get emissionsRecGeneric => _t(
+    'Consulta un mecánico certificado para diagnóstico detallado de este código.',
+    'Consult a certified mechanic for detailed diagnosis of this code.',
+  );
+
+  // ── Log CSV export ──
+  String get logsExportCsv => _t('Exportar CSV', 'Export CSV');
+
+  // ── History Screen ──
+  String get historyTitle => _t('Historial', 'History');
+  String get historyTabSessions => _t('Sesiones', 'Sessions');
+  String get historyTabDraggy => _t('Draggy', 'Draggy');
+  String get historyTabMileage => _t('Kilometraje', 'Mileage');
+  String get historyNoSessions =>
+      _t('Sin sesiones de conducción', 'No drive sessions');
+  String get historyNoDragRuns =>
+      _t('Sin pruebas de aceleración', 'No drag runs');
+  String get historyNoMileage =>
+      _t('Sin verificaciones de kilometraje', 'No mileage checks');
+  String get historyModulesRead => _t('módulos leídos', 'modules read');
+
+  // ── Mileage PDF export ──
+  String get mileageExportPdf =>
+      _t('Exportar reporte PDF', 'Export PDF report');
 
   String _t(String es, String en) => language == AppLanguage.es ? es : en;
 }

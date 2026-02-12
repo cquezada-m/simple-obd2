@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../l10n/app_localizations.dart';
 import '../services/app_logger.dart';
 import '../theme/app_theme.dart';
@@ -37,6 +40,25 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
   List<LogEntry> get _filteredEntries {
     final logger = AppLogger.instance;
     return _filter == null ? logger.entries : logger.byCategory(_filter!);
+  }
+
+  Future<void> _exportCsv(AppLocalizations l) async {
+    final entries = _filteredEntries;
+    if (entries.isEmpty) return;
+    final buf = StringBuffer('timestamp,category,message,detail\n');
+    for (final e in entries) {
+      final ts = e.timestamp.toIso8601String();
+      final cat = e.category.name;
+      final msg = e.message.replaceAll('"', '""');
+      final det = (e.detail ?? '').replaceAll('"', '""');
+      buf.writeln('"$ts","$cat","$msg","$det"');
+    }
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      '${dir.path}/obd2_logs_${DateTime.now().millisecondsSinceEpoch}.csv',
+    );
+    await file.writeAsString(buf.toString());
+    await Share.shareXFiles([XFile(file.path)], text: 'OBD2 Scanner Logs');
   }
 
   @override
@@ -152,6 +174,12 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
                 context,
               ).showSnackBar(SnackBar(content: Text(l.logsCopied)));
             },
+          ),
+          IconButton(
+            icon: const Icon(Icons.file_download_rounded, size: 18),
+            tooltip: l.logsExportCsv,
+            color: AppTheme.success,
+            onPressed: () => _exportCsv(l),
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline_rounded, size: 18),

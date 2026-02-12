@@ -6,8 +6,11 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/drag_config.dart';
 import '../models/drag_run.dart';
+import '../providers/history_provider.dart';
 import '../providers/obd2_provider.dart';
+import '../providers/subscription_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/paywall_sheet.dart';
 import 'drag_result_screen.dart';
 
 enum DragState { selectTest, ready, running, finished }
@@ -40,6 +43,13 @@ class _DraggyScreenState extends State<DraggyScreen> {
 
   void _startTest() {
     final provider = context.read<Obd2Provider>();
+    final isPro = context.read<SubscriptionProvider>().isPro;
+
+    // FREE users can only run 0-100 km/h
+    if (!isPro && _selectedConfig != DragConfig.zero100) {
+      showPaywall(context);
+      return;
+    }
 
     // In mock mode, run a simulated drag test
     if (provider.useMockData) {
@@ -83,7 +93,9 @@ class _DraggyScreenState extends State<DraggyScreen> {
 
       if (_state == DragState.running) {
         final now = DateTime.now();
-        _elapsed = now.difference(_startTime!);
+        final start = _startTime;
+        if (start == null) return;
+        _elapsed = now.difference(start);
         if (currentRpm > _maxRpm) _maxRpm = currentRpm;
 
         _samples.add(
@@ -164,6 +176,7 @@ class _DraggyScreenState extends State<DraggyScreen> {
         : int.tryParse(provider.liveParams[2].value) ?? 0;
 
     final run = DragRun(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
       config: _selectedConfig,
       timestamp: DateTime.now(),
       totalTime: _elapsed,
@@ -173,6 +186,9 @@ class _DraggyScreenState extends State<DraggyScreen> {
       endTempC: endTemp,
       samples: List.unmodifiable(_samples),
     );
+
+    // Save to history
+    context.read<HistoryProvider>().saveDragRun(run);
 
     setState(() => _state = DragState.finished);
 
@@ -228,6 +244,7 @@ class _DraggyScreenState extends State<DraggyScreen> {
   }
 
   Widget _buildTestSelector(AppLocalizations l) {
+    final isPro = context.watch<SubscriptionProvider>().isPro;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -246,27 +263,53 @@ class _DraggyScreenState extends State<DraggyScreen> {
             if (v != null) _selectedConfig = v;
           }),
           child: Column(
-            children: DragConfig.presets
-                .map(
-                  (config) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: GlassCard(
-                      margin: EdgeInsets.zero,
-                      child: ListTile(
-                        title: Text(
-                          l.locale == 'es' ? config.name : config.nameEn,
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+            children: DragConfig.presets.map((config) {
+              final locked = !isPro && config != DragConfig.zero100;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: GlassCard(
+                  margin: EdgeInsets.zero,
+                  child: ListTile(
+                    title: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            l.locale == 'es' ? config.name : config.nameEn,
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
-                        leading: Radio<DragConfig>(
-                          value: config,
-                          activeColor: AppTheme.primary,
-                        ),
-                        onTap: () => setState(() => _selectedConfig = config),
-                      ),
+                        if (locked)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.purple.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'PRO',
+                              style: GoogleFonts.inter(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.purple,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
+                    leading: Radio<DragConfig>(
+                      value: config,
+                      activeColor: AppTheme.primary,
+                    ),
+                    onTap: () => setState(() => _selectedConfig = config),
                   ),
-                )
-                .toList(),
+                ),
+              );
+            }).toList(),
           ),
         ),
         const Spacer(),

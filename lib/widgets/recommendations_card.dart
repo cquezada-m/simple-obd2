@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/recommendation.dart';
+import '../providers/subscription_provider.dart';
 import '../theme/app_theme.dart';
+import 'paywall_sheet.dart';
 
 class AiRecommendationsCard extends StatelessWidget {
   final List<Recommendation> recommendations;
@@ -11,6 +14,62 @@ class AiRecommendationsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final isPro = context.watch<SubscriptionProvider>().isPro;
+
+    // FREE users see a locked card instead of recommendations
+    if (!isPro) {
+      return GlassCard(
+        child: Column(
+          children: [
+            _buildHeader(l),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () => showPaywall(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                decoration: BoxDecoration(
+                  color: AppTheme.purple.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppTheme.purple.withValues(alpha: 0.12),
+                  ),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.lock_rounded,
+                        size: 28,
+                        color: AppTheme.purple.withValues(alpha: 0.6),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        l.proRequired,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l.proUpgrade,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.purple,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

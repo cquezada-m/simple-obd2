@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/vehicle_parameter.dart';
+import '../providers/subscription_provider.dart';
 import '../theme/app_theme.dart';
 import 'animated_value_text.dart';
+import 'paywall_sheet.dart';
 import 'pulsing_dot.dart';
 
 class LiveParametersCard extends StatelessWidget {
@@ -33,10 +36,96 @@ class LiveParametersCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final isPro = context.watch<SubscriptionProvider>().isPro;
     // Filter out RPM and Speed — they're shown in the RadialGaugeCard
     final filtered = parameters
         .where((p) => p.label != 'rpm' && p.label != 'speed')
         .toList();
+
+    // FREE users don't see extra parameters — show PRO gate
+    if (!isPro && filtered.isNotEmpty) {
+      return GlassCard(
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l.liveParameters,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.purple.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    l.proBadge,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.purple,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () => showPaywall(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 28),
+                decoration: BoxDecoration(
+                  color: AppTheme.purple.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppTheme.purple.withValues(alpha: 0.12),
+                  ),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.lock_rounded,
+                        size: 28,
+                        color: AppTheme.purple.withValues(alpha: 0.6),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        '${filtered.length} ${l.liveParameters.toLowerCase()}',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l.proUpgrade,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.purple,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return GlassCard(
       child: Column(
         children: [

@@ -185,6 +185,51 @@ abstract class Obd2BaseService {
             : 'Diagnostic code: $code');
   }
 
+  /// Discovers which Mode 01 PIDs are supported by the vehicle.
+  ///
+  /// OBD2 uses PIDs 00, 20, 40, 60, 80, A0, C0, E0 as bitmask queries.
+  /// Each returns 4 bytes (32 bits) indicating support for the next 32 PIDs.
+  /// Bit 31 (MSB of byte 0) = PID base+1, ..., Bit 0 (LSB of byte 3) = PID base+32.
+  /// If bit 0 (PID base+0x20) is set, the next range is also available.
+  ///
+  /// Returns a set of supported PID numbers (e.g. {0x04, 0x05, 0x0C, ...}).
+  static Future<Set<int>> discoverSupportedPids(Obd2BaseService service) async {
+    final supported = <int>{};
+    // Query ranges: 0x00 covers PIDs 01-20, 0x20 covers 21-40, etc.
+    const ranges = [0x00, 0x20, 0x40, 0x60];
+
+    for (final base in ranges) {
+      final pidCmd =
+          '01${base.toRadixString(16).padLeft(2, '0').toUpperCase()}';
+      final expectedHeader =
+          '41${base.toRadixString(16).padLeft(2, '0').toUpperCase()}';
+
+      final response = await service.sendRawCommand(pidCmd);
+      if (response == null || response.isEmpty) break;
+
+      final bytes = extractResponseBytes(response, expectedHeader);
+      if (bytes == null || bytes.length < 4) break;
+
+      // Decode 32-bit bitmask
+      for (var byteIdx = 0; byteIdx < 4; byteIdx++) {
+        for (var bit = 7; bit >= 0; bit--) {
+          if ((bytes[byteIdx] & (1 << bit)) != 0) {
+            final pidNum = base + (byteIdx * 8) + (7 - bit) + 1;
+            supported.add(pidNum);
+          }
+        }
+      }
+
+      // Bit 0 of the last byte (PID base+0x20) indicates if next range exists
+      final nextRangePid = base + 0x20;
+      if (!supported.contains(nextRangePid)) break;
+      // Remove the "support query" PIDs themselves — they're not real sensors
+      supported.remove(nextRangePid);
+    }
+
+    return supported;
+  }
+
   /// Extracts raw data bytes from an OBD2 response given the expected header.
   /// Returns a list of integer byte values, or null if parsing fails.
   static List<int>? extractResponseBytes(

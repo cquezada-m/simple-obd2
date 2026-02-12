@@ -3,7 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/obd2_provider.dart';
+import '../providers/subscription_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/paywall_sheet.dart';
 
 class EmissionsCheckScreen extends StatelessWidget {
   const EmissionsCheckScreen({super.key});
@@ -115,6 +117,97 @@ class EmissionsCheckScreen extends StatelessWidget {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        // PRO detail: recommendations per blocking code
+                        Consumer<SubscriptionProvider>(
+                          builder: (context, sub, _) {
+                            if (sub.isPro) {
+                              return GlassCard(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.auto_fix_high_rounded,
+                                          size: 16,
+                                          color: AppTheme.purple,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          l.emissionsProRecommendations,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppTheme.textPrimary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ...provider.dtcCodes.map(
+                                      (dtc) => Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 8,
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              dtc.code,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppTheme.primary,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              _recommendationForCode(
+                                                dtc.code,
+                                                l,
+                                              ),
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                                color: AppTheme.textSecondary,
+                                                height: 1.4,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                            return GlassCard(
+                              child: InkWell(
+                                onTap: () => showPaywall(context),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.lock_rounded,
+                                      size: 16,
+                                      color: AppTheme.purple,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      l.emissionsProUnlock,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppTheme.purple,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ],
                       const SizedBox(height: 12),
                       GlassCard(
@@ -136,5 +229,16 @@ class EmissionsCheckScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _recommendationForCode(String code, AppLocalizations l) {
+    final prefix = code.isNotEmpty ? code[0].toUpperCase() : '';
+    return switch (prefix) {
+      'P' => l.emissionsRecPowertrain,
+      'C' => l.emissionsRecChassis,
+      'B' => l.emissionsRecBody,
+      'U' => l.emissionsRecNetwork,
+      _ => l.emissionsRecGeneric,
+    };
   }
 }

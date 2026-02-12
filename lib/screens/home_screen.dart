@@ -5,14 +5,18 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/language_provider.dart';
 import '../providers/obd2_provider.dart';
+import '../providers/subscription_provider.dart';
+import '../screens/alert_settings_screen.dart';
 import '../screens/chat_ai_screen.dart';
 import '../screens/draggy_screen.dart';
 import '../screens/drive_session_screen.dart';
 import '../screens/emissions_check_screen.dart';
+import '../screens/history_screen.dart';
 import '../screens/mileage_check_screen.dart';
 import '../screens/privacy_policy_screen.dart';
 import '../screens/log_viewer_screen.dart';
 import '../screens/sensor_explorer_screen.dart';
+import '../screens/vehicle_profiles_screen.dart';
 import '../services/pdf_report_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/page_transitions.dart';
@@ -25,6 +29,7 @@ import '../widgets/recommendations_card.dart';
 import '../widgets/device_picker_sheet.dart';
 import '../widgets/emissions_check_card.dart';
 import '../widgets/alert_banner.dart';
+import '../widgets/paywall_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -325,6 +330,8 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           _buildLanguageToggle(),
           const SizedBox(width: 8),
+          _buildProBadge(),
+          const SizedBox(width: 8),
           _buildAppBarMenu(l),
         ],
       ),
@@ -349,6 +356,25 @@ class _HomeScreenState extends State<HomeScreen>
       offset: const Offset(0, 44),
       onSelected: (value) {
         switch (value) {
+          case 'profiles':
+            Navigator.push(
+              context,
+              SlideFadeRoute(page: const VehicleProfilesScreen()),
+            );
+          case 'alerts':
+            Navigator.push(
+              context,
+              SlideFadeRoute(page: const AlertSettingsScreen()),
+            );
+          case 'history':
+            if (context.read<SubscriptionProvider>().isPro) {
+              Navigator.push(
+                context,
+                SlideFadeRoute(page: const HistoryScreen()),
+              );
+            } else {
+              showPaywall(context);
+            }
           case 'logs':
             Navigator.push(
               context,
@@ -359,41 +385,153 @@ class _HomeScreenState extends State<HomeScreen>
               context,
               SlideFadeRoute(page: const PrivacyPolicyScreen()),
             );
+          case 'debug_pro':
+            context.read<SubscriptionProvider>().debugTogglePro();
         }
       },
-      itemBuilder: (_) => [
-        PopupMenuItem(
-          value: 'logs',
-          child: Row(
-            children: [
-              const Icon(
-                Icons.terminal_rounded,
-                size: 18,
-                color: AppTheme.purple,
-              ),
-              const SizedBox(width: 10),
-              Text(l.logsTitle, style: GoogleFonts.inter(fontSize: 13)),
-            ],
+      itemBuilder: (_) {
+        final sub = context.read<SubscriptionProvider>();
+        return [
+          PopupMenuItem(
+            value: 'profiles',
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.directions_car_rounded,
+                  size: 18,
+                  color: AppTheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Text(l.profilesTitle, style: GoogleFonts.inter(fontSize: 13)),
+              ],
+            ),
           ),
-        ),
-        PopupMenuItem(
-          value: 'privacy',
-          child: Row(
-            children: [
-              const Icon(
-                Icons.shield_outlined,
-                size: 18,
-                color: AppTheme.primary,
-              ),
-              const SizedBox(width: 10),
-              Text(
-                l.privacyPolicyTitle,
-                style: GoogleFonts.inter(fontSize: 13),
-              ),
-            ],
+          PopupMenuItem(
+            value: 'alerts',
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.notifications_active_rounded,
+                  size: 18,
+                  color: AppTheme.warning,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  l.alertSettingsTitle,
+                  style: GoogleFonts.inter(fontSize: 13),
+                ),
+                if (!sub.isPro) ...[
+                  const SizedBox(width: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.purple.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'PRO',
+                      style: GoogleFonts.inter(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.purple,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-        ),
-      ],
+          PopupMenuItem(
+            value: 'history',
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.history_rounded,
+                  size: 18,
+                  color: AppTheme.success,
+                ),
+                const SizedBox(width: 10),
+                Text(l.historyTitle, style: GoogleFonts.inter(fontSize: 13)),
+                if (!sub.isPro) ...[
+                  const SizedBox(width: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.purple.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'PRO',
+                      style: GoogleFonts.inter(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.purple,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'logs',
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.terminal_rounded,
+                  size: 18,
+                  color: AppTheme.purple,
+                ),
+                const SizedBox(width: 10),
+                Text(l.logsTitle, style: GoogleFonts.inter(fontSize: 13)),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'privacy',
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.shield_outlined,
+                  size: 18,
+                  color: AppTheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  l.privacyPolicyTitle,
+                  style: GoogleFonts.inter(fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          // Debug: toggle PRO (remove before release)
+          PopupMenuItem(
+            value: 'debug_pro',
+            child: Row(
+              children: [
+                Icon(
+                  sub.isPro
+                      ? Icons.toggle_on_rounded
+                      : Icons.toggle_off_rounded,
+                  size: 18,
+                  color: sub.isPro ? AppTheme.success : AppTheme.textTertiary,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  sub.isPro ? 'Debug: PRO ON' : 'Debug: PRO OFF',
+                  style: GoogleFonts.inter(fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ];
+      },
     );
   }
 
@@ -435,8 +573,73 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  Widget _buildProBadge() {
+    final sub = context.watch<SubscriptionProvider>();
+    if (sub.isPro) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppTheme.purple.withValues(alpha: 0.15),
+              AppTheme.primary.withValues(alpha: 0.1),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          'PRO',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.purple,
+          ),
+        ),
+      );
+    }
+    return GestureDetector(
+      onTap: () => showPaywall(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppTheme.purple.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.workspace_premium_rounded,
+              size: 16,
+              color: AppTheme.purple,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'PRO',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.purple,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildFeatureTools(BuildContext context, Obd2Provider provider) {
     final l = AppLocalizations.of(context);
+    final isPro = context.watch<SubscriptionProvider>().isPro;
+
+    void gatedNav(Widget page) {
+      if (isPro) {
+        Navigator.push(context, SlideFadeRoute(page: page));
+      } else {
+        showPaywall(context);
+      }
+    }
+
     final tools = [
       _FeatureItem(
         Icons.timer_rounded,
@@ -444,15 +647,14 @@ class _HomeScreenState extends State<HomeScreen>
         AppTheme.purple,
         () =>
             Navigator.push(context, SlideFadeRoute(page: const DraggyScreen())),
+        false,
       ),
       _FeatureItem(
         Icons.sensors_rounded,
         l.sensorExplorerTitle,
         AppTheme.cyan,
-        () => Navigator.push(
-          context,
-          SlideFadeRoute(page: const SensorExplorerScreen()),
-        ),
+        () => gatedNav(const SensorExplorerScreen()),
+        !isPro,
       ),
       _FeatureItem(
         Icons.speed_rounded,
@@ -462,28 +664,34 @@ class _HomeScreenState extends State<HomeScreen>
           context,
           SlideFadeRoute(page: const MileageCheckScreen()),
         ),
+        false,
       ),
       _FeatureItem(
         Icons.route_rounded,
         l.driveSessionTitle,
         AppTheme.success,
-        () => Navigator.push(
-          context,
-          SlideFadeRoute(page: const DriveSessionScreen()),
-        ),
+        () => gatedNav(const DriveSessionScreen()),
+        !isPro,
       ),
       _FeatureItem(
         Icons.chat_rounded,
         l.chatAiTitle,
         AppTheme.primary,
-        () =>
-            Navigator.push(context, SlideFadeRoute(page: const ChatAiScreen())),
+        () => gatedNav(const ChatAiScreen()),
+        !isPro,
       ),
       _FeatureItem(
         Icons.picture_as_pdf_rounded,
         l.featureExportPdf,
         AppTheme.error,
-        () => _exportPdf(context, provider),
+        () {
+          if (isPro) {
+            _exportPdf(context, provider);
+          } else {
+            showPaywall(context);
+          }
+        },
+        !isPro,
       ),
     ];
     return Column(
@@ -530,6 +738,7 @@ class _HomeScreenState extends State<HomeScreen>
                 label: t.label,
                 color: t.color,
                 onTap: t.onTap,
+                locked: t.locked,
               );
             },
           ),
@@ -544,6 +753,7 @@ class _HomeScreenState extends State<HomeScreen>
     required String label,
     required Color color,
     required VoidCallback onTap,
+    bool locked = false,
   }) {
     return Padding(
       padding: const EdgeInsets.only(right: 10),
@@ -568,7 +778,29 @@ class _HomeScreenState extends State<HomeScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icon, size: 26, color: color),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(icon, size: 26, color: color),
+                      if (locked)
+                        Positioned(
+                          right: -6,
+                          top: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.purple,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Icon(
+                              Icons.lock,
+                              size: 8,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     label,
@@ -831,5 +1063,12 @@ class _FeatureItem {
   final String label;
   final Color color;
   final VoidCallback onTap;
-  const _FeatureItem(this.icon, this.label, this.color, this.onTap);
+  final bool locked;
+  const _FeatureItem(
+    this.icon,
+    this.label,
+    this.color,
+    this.onTap,
+    this.locked,
+  );
 }

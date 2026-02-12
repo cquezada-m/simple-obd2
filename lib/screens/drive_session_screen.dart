@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/drive_session.dart';
+import '../providers/history_provider.dart';
 import '../providers/obd2_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -157,6 +158,17 @@ class _DriveSessionScreenState extends State<DriveSessionScreen> {
 
   void _stopRecording() {
     _timer?.cancel();
+    // Save session to history
+    final provider = context.read<Obd2Provider>();
+    final session = DriveSession(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      startTime: _startTime!,
+      endTime: DateTime.now(),
+      dataPoints: List.unmodifiable(_dataPoints),
+      events: List.unmodifiable(_events),
+      vin: provider.vin.isNotEmpty ? provider.vin : null,
+    );
+    context.read<HistoryProvider>().saveSession(session);
     setState(() => _isRecording = false);
   }
 
